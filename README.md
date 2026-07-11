@@ -53,5 +53,5 @@ make frontend    # run Next.js dev server
 | Variable            | Default                                                     | Description           |
 | ------------------- | ----------------------------------------------------------- | --------------------- |
 | `DATABASE_URL`      | `postgres://crm_user:crm_password@localhost:5432/classroom_db` | PostgreSQL connection |
-| `PORT`              | `8080`                                                      | API server port       |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8080`                                   | Backend URL for frontend |
+| `PORT`              | `8000`                                                      | API server port       |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000`                                   | Backend URL for frontend |

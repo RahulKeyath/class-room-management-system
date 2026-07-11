@@ -1,6 +1,18 @@
 import Link from "next/link";
+import { RosterTable } from "@/features/attendance/components/RosterTable";
+import { apiFetch } from "@/lib/api";
+import { AttendanceRecord } from "@/features/attendance/types";
 
-export default function AttendancePage() {
+export default async function AttendancePage() {
+  let records: AttendanceRecord[] = [];
+  try {
+    records = await apiFetch<AttendanceRecord[]>("/api/v1/attendance", {
+      next: { revalidate: 0 },
+    });
+  } catch (error) {
+    console.error("Failed to fetch attendance:", error);
+  }
+
   return (
     <main className="min-h-screen bg-background">
       {/* ── Header ──────────────────────────────────────────────── */}
@@ -40,25 +52,7 @@ export default function AttendancePage() {
           </button>
         </div>
 
-        {/* Placeholder table — will be replaced by RosterTable component */}
-        <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Student</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-t border-border">
-                <td className="px-4 py-3 text-muted-foreground" colSpan={3}>
-                  No attendance records yet. Connect the API to get started.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <RosterTable records={records} />
       </section>
     </main>
   );
