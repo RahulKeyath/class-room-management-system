@@ -4,12 +4,14 @@ import { QuickStat } from "./quick-stat";
 import { ClassGrid } from "./class-grid";
 import { StaffGrid } from "./staff-grid";
 import { SectionGrid } from "./section-grid";
+import { MarkAttendance } from "./mark-attendance";
 import { CLASS_DATA, DEPARTMENT_DATA } from "../data/mock-data";
 
 export function AdminView() {
   const [date] = useState(new Date().toLocaleDateString("en-US", { dateStyle: "long" }));
   const [view, setView] = useState<"students" | "staff">("students");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
   const totalStudents = CLASS_DATA.reduce((s, c) => s + c.students, 0);
   const totalPresent = CLASS_DATA.reduce((s, c) => s + c.present, 0);
@@ -50,6 +52,7 @@ export function AdminView() {
               onClick={() => {
                 setView("students");
                 setSelectedClassId(null);
+                setSelectedSection(null);
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
               style={{
@@ -65,6 +68,7 @@ export function AdminView() {
               onClick={() => {
                 setView("staff");
                 setSelectedClassId(null);
+                setSelectedSection(null);
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
               style={{
@@ -100,8 +104,21 @@ export function AdminView() {
 
       {/* Cards grid */}
       {view === "students" ? (
-        selectedClassId ? (
-          <SectionGrid selectedClassId={selectedClassId} setSelectedClassId={setSelectedClassId} />
+        selectedClassId && selectedSection ? (
+          <MarkAttendance
+            classId={selectedClassId}
+            section={selectedSection}
+            onBack={() => setSelectedSection(null)}
+          />
+        ) : selectedClassId ? (
+          <SectionGrid
+            selectedClassId={selectedClassId}
+            setSelectedClassId={(id) => {
+              setSelectedClassId(id);
+              setSelectedSection(null);
+            }}
+            onSelectSection={setSelectedSection}
+          />
         ) : (
           <ClassGrid setSelectedClassId={setSelectedClassId} />
         )

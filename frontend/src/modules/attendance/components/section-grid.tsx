@@ -8,9 +8,10 @@ const cardTransition: React.CSSProperties = {
 interface SectionGridProps {
   selectedClassId: string;
   setSelectedClassId: (id: string | null) => void;
+  onSelectSection: (section: string) => void;
 }
 
-export function SectionGrid({ selectedClassId, setSelectedClassId }: SectionGridProps) {
+export function SectionGrid({ selectedClassId, setSelectedClassId, onSelectSection }: SectionGridProps) {
   const cls = CLASS_DATA.find((c) => c.id === selectedClassId)!;
   const sections = ["A", "B", "C"].map((name, i) => {
     const baseStudents = Math.floor(cls.students / 3);
@@ -52,6 +53,7 @@ export function SectionGrid({ selectedClassId, setSelectedClassId }: SectionGrid
           return (
             <button
               key={sec.name}
+              onClick={() => onSelectSection(sec.name)}
               className="group relative overflow-hidden rounded-xl border border-border/60 bg-card text-left shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elegant)] hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               style={cardTransition}
             >
