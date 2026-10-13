@@ -17,7 +17,7 @@ type Config struct {
 // to sensible defaults for local development.
 func Load() Config {
 	return Config{
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://crm_user:crm_password@localhost:5432/classroom_db?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://crm_user:crm_password@localhost:5433/classroom_db?sslmode=disable"),
 		Port:        getEnv("PORT", "8000"),
 	}
 }

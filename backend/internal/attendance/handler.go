@@ -2,6 +2,7 @@ package attendance
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -59,7 +60,7 @@ func (h *Handler) MarkAttendance(w http.ResponseWriter, r *http.Request) {
 
 	record, err := h.service.MarkAttendance(r.Context(), req)
 	if err != nil {
-		http.Error(w, `{"error":"failed to mark attendance"}`, http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, http.StatusCreated, record)

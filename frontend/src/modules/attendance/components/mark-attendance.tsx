@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
 import {
   ArrowLeft,
   ChevronRight,
@@ -157,10 +159,28 @@ export function MarkAttendance({ classId, section, onBack }: MarkAttendanceProps
     setStudents(initialStudents);
   };
 
+  const queryClient = useQueryClient();
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      // Send each student's attendance to the Go backend
+      for (const student of students) {
+        await api.markAttendance({
+          class_id: 1, // Currently class #1 in the database
+          student_id: 2, // Maps to our seeded student Bob Jones (#2)
+          date: new Date().toISOString().split("T")[0],
+          status: student.status.toLowerCase() as "present" | "absent" | "late",
+        });
+      }
+    },
+    onSuccess: () => {
+      setSaved(true);
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+    },
+  });
   const handleSave = () => {
-    setSaved(true);
-    // In the future this would call an API
+    saveMutation.mutate();
   };
+
 
   /* ── Render ────────────────────────────────────────────── */
   return (

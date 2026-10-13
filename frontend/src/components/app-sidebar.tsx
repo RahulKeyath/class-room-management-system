@@ -9,6 +9,7 @@ import {
   TrendingUp,
   BookOpen,
   School,
+  LogOut,
 } from "lucide-react";
 
 import {
@@ -24,7 +25,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useRole } from "@/lib/role-context";
+import { useAuth } from "@/lib/auth-context";
 import { CURRENT_USER, type Role } from "@/lib/mock-data";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
@@ -98,12 +101,44 @@ const NAV_BY_ROLE: Record<Role, { label: string; items: NavItem[] }[]> = {
       ],
     },
   ],
+  parent: [
+    {
+      label: "Overview",
+      items: [{ title: "Dashboard", url: "/", icon: LayoutDashboard }],
+    },
+    {
+      label: "Ward Portal",
+      items: [
+        { title: "Attendance", url: "/attendance", icon: CalendarCheck },
+        { title: "Timetable", url: "/timetable", icon: CalendarDays },
+        { title: "Results", url: "/results", icon: Trophy },
+        { title: "Performance", url: "/performance", icon: TrendingUp },
+      ],
+    },
+  ],
+  staff: [
+    {
+      label: "Overview",
+      items: [{ title: "Dashboard", url: "/", icon: LayoutDashboard }],
+    },
+    {
+      label: "Operations",
+      items: [
+        { title: "Attendance", url: "/attendance", icon: CalendarCheck },
+        { title: "Timetable", url: "/timetable", icon: CalendarDays },
+        { title: "Students", url: "/students", icon: GraduationCap },
+        { title: "Staff Directory", url: "/staff", icon: Users },
+      ],
+    },
+  ],
 };
 
 export function AppSidebar() {
   const { role, setRole } = useRole();
+  const { logout } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
-  const isActive = (url: string) => (url === "/" ? currentPath === "/" : currentPath.startsWith(url));
+  const isActive = (url: string) =>
+    url === "/" ? currentPath === "/" : currentPath.startsWith(url);
   const user = CURRENT_USER[role];
 
   return (
@@ -114,8 +149,12 @@ export function AppSidebar() {
             <School className="h-5 w-5" />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold text-sidebar-foreground">Northgate Academy</span>
-            <span className="text-xs text-sidebar-foreground/60">Classroom Suite</span>
+            <span className="text-sm font-semibold text-sidebar-foreground">
+              Northgate Academy
+            </span>
+            <span className="text-xs text-sidebar-foreground/60">
+              Classroom Suite
+            </span>
           </div>
         </div>
       </SidebarHeader>
@@ -128,7 +167,11 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={item.title}
+                    >
                       <Link to={item.url}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -144,7 +187,9 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border gap-2">
         <div className="px-2 group-data-[collapsible=icon]:hidden">
-          <label className="text-xs text-sidebar-foreground/60 mb-1 block">View as</label>
+          <label className="text-xs text-sidebar-foreground/60 mb-1 block">
+            View as
+          </label>
           <Select value={role} onValueChange={(v) => setRole(v as Role)}>
             <SelectTrigger className="h-8 bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
               <SelectValue />
@@ -153,19 +198,36 @@ export function AppSidebar() {
               <SelectItem value="admin">Administrator</SelectItem>
               <SelectItem value="teacher">Teacher</SelectItem>
               <SelectItem value="student">Student</SelectItem>
+              <SelectItem value="parent">Parent</SelectItem>
+              <SelectItem value="staff">Staff</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2 px-2 py-2">
-          <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
-              {user.avatar}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</span>
-            <span className="text-xs text-sidebar-foreground/60 truncate">{user.title}</span>
+
+        <div className="flex items-center justify-between px-2 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
+                {user.avatar}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
+              <span className="text-sm font-medium text-sidebar-foreground truncate">
+                {user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60 truncate">
+                {user.title}
+              </span>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            title="Sign out of portal"
+            className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:hidden shrink-0"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>

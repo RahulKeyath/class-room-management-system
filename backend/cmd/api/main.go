@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -62,6 +63,7 @@ func main() {
 			r.Get("/", attendanceHandler.List)
 			r.Post("/", attendanceHandler.MarkAttendance)
 			r.Get("/{id}", attendanceHandler.GetByID)
+			r.Get("/roles", listRolesHandler(pool))
 		})
 	})
 

@@ -7,7 +7,10 @@ export const Route = createFileRoute("/attendance")({
   head: () => ({
     meta: [
       { title: "Attendance — Northgate Academy" },
-      { name: "description", content: "Track student and staff attendance with daily summaries." },
+      {
+        name: "description",
+        content: "Track student and staff attendance with daily summaries.",
+      },
     ],
   }),
   component: AttendancePage,
@@ -15,5 +18,9 @@ export const Route = createFileRoute("/attendance")({
 
 function AttendancePage() {
   const { role } = useRole();
-  return role === "student" ? <StudentView /> : <AdminView />;
+  return role === "student" || role === "parent" ? (
+    <StudentView />
+  ) : (
+    <AdminView />
+  );
 }
