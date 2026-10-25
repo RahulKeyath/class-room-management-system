@@ -31,10 +31,48 @@ type ClassEnrolment struct {
 	EnrolledAt pgtype.Timestamptz `json:"enrolled_at"`
 }
 
+type Department struct {
+	ID        int32              `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Permission struct {
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description pgtype.Text `json:"description"`
+	Category    string      `json:"category"`
+}
+
+type Role struct {
+	ID             int32              `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	DepartmentName pgtype.Text        `json:"department_name"`
+	Description    pgtype.Text        `json:"description"`
+	Status         string             `json:"status"`
+	IsSystem       bool               `json:"is_system"`
+	Color          string             `json:"color"`
+	IconName       string             `json:"icon_name"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type RolePermission struct {
+	RoleID       int32  `json:"role_id"`
+	PermissionID string `json:"permission_id"`
+}
+
 type User struct {
 	ID        int64              `json:"id"`
 	FullName  string             `json:"full_name"`
 	Email     string             `json:"email"`
 	Role      string             `json:"role"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type UserRole struct {
+	ID     int32  `json:"id"`
+	Role   string `json:"role"`
+	Status string `json:"status"`
 }

@@ -10,6 +10,7 @@ import {
   BookOpen,
   School,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -51,6 +52,7 @@ const NAV_BY_ROLE: Record<Role, { label: string; items: NavItem[] }[]> = {
         // { title: "Students", url: "/students", icon: GraduationCap },
         // { title: "Staff", url: "/staff", icon: Users },
         { title: "Attendance", url: "/attendance", icon: CalendarCheck },
+        { title: "Roles", url: "/roles", icon: ShieldCheck },
         // { title: "Timetable", url: "/timetable", icon: CalendarDays },
       ],
     },

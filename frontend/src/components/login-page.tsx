@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ROLE_CREDENTIALS } from "@/lib/auth-types";
 import { CURRENT_USER, type Role } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +92,42 @@ const ROLE_OPTIONS: RoleOption[] = [
   },
 ];
 
+const ROLE_METADATA: Record<
+  string,
+  { id: Role; badge: string; icon: typeof School; description: string }
+> = {
+  Administrator: {
+    id: "admin",
+    badge: "Executive",
+    icon: ShieldCheck,
+    description: "Principal, Deans & Operations",
+  },
+  Faculty: {
+    id: "teacher",
+    badge: "Academics",
+    icon: Users,
+    description: "Professors & Teaching Staff",
+  },
+  Student: {
+    id: "student",
+    badge: "Scholar",
+    icon: GraduationCap,
+    description: "Students & Enrolled Scholars",
+  },
+  Parent: {
+    id: "parent",
+    badge: "Guardian",
+    icon: HeartHandshake,
+    description: "Guardians & Student Sponsors",
+  },
+  Staff: {
+    id: "staff",
+    badge: "Operations",
+    icon: Briefcase,
+    description: "Administrative & Operational Staff",
+  },
+};
+
 const PERSONA_LABELS: Record<
   Role,
   { shortName: string; roleLabel: string; title: string }
@@ -123,6 +161,33 @@ const PERSONA_LABELS: Record<
 
 export function LoginPage() {
   const { login } = useAuth();
+
+  // Fetch dynamic roles from backend database
+  const { data: dbRoles } = useQuery({
+    queryKey: ["userRoles"],
+    queryFn: () => api.getUserRoles(),
+  });
+
+  const roleOptions: RoleOption[] = useMemo(() => {
+    if (!dbRoles || dbRoles.length === 0) return ROLE_OPTIONS;
+
+    return dbRoles.map((r) => {
+      const meta = ROLE_METADATA[r.role] || {
+        id: (r.role.toLowerCase() === "faculty" ? "teacher" : r.role.toLowerCase()) as Role,
+        badge: "User",
+        icon: School,
+        description: `${r.role} Portal Access`,
+      };
+      return {
+        id: meta.id,
+        label: r.role,
+        badge: meta.badge,
+        icon: meta.icon,
+        description: meta.description,
+      };
+    });
+  }, [dbRoles]);
+
   const [selectedRole, setSelectedRole] = useState<Role>("admin");
   const [email, setEmail] = useState<string>(ROLE_CREDENTIALS.admin.email);
   const [password, setPassword] = useState<string>(ROLE_CREDENTIALS.admin.pass);
@@ -190,7 +255,7 @@ export function LoginPage() {
       await login(selectedRole, { email, password });
       const persona = CURRENT_USER[selectedRole];
       toast.success(`Welcome back, ${persona.name}!`, {
-        description: `Signed in to ${ROLE_OPTIONS.find((r) => r.id === selectedRole)?.label} Portal.`,
+        description: `Signed in to ${roleOptions.find((r) => r.id === selectedRole)?.label || "Portal"}.`,
       });
     } catch {
       toast.error(
@@ -214,7 +279,7 @@ export function LoginPage() {
       });
       const persona = CURRENT_USER[role];
       toast.success(`Welcome back, ${persona.name}!`, {
-        description: `Authenticated as ${ROLE_OPTIONS.find((r) => r.id === role)?.label}.`,
+        description: `Authenticated as ${roleOptions.find((r) => r.id === role)?.label || role}.`,
       });
     } catch {
       toast.error("Quick sign-in encountered an issue.");
@@ -509,7 +574,7 @@ export function LoginPage() {
                     Select Institutional Role
                   </Label>
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-accent/15 text-accent">
-                    5 Portals
+                    {roleOptions.length} Portals
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -531,8 +596,8 @@ export function LoginPage() {
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="text-xs font-semibold px-2 text-foreground/80 tabular-nums select-none">
-                  {ROLE_OPTIONS.findIndex((r) => r.id === selectedRole) + 1} of{" "}
-                  {ROLE_OPTIONS.length}
+                  {Math.max(1, roleOptions.findIndex((r) => r.id === selectedRole) + 1)} of{" "}
+                  {roleOptions.length}
                 </span>
                 <button
                   type="button"
@@ -576,7 +641,7 @@ export function LoginPage() {
                   WebkitOverflowScrolling: "touch",
                 }}
               >
-                {ROLE_OPTIONS.map((opt) => {
+                {roleOptions.map((opt) => {
                   const isSelected = selectedRole === opt.id;
                   const Icon = opt.icon;
                   return (
@@ -629,13 +694,13 @@ export function LoginPage() {
                 </span>
                 <p className="text-muted-foreground truncate">
                   <span className="font-semibold text-foreground">
-                    {ROLE_OPTIONS.find((r) => r.id === selectedRole)?.label}:
+                    {roleOptions.find((r) => r.id === selectedRole)?.label}:
                   </span>{" "}
-                  {ROLE_OPTIONS.find((r) => r.id === selectedRole)?.description}
+                  {roleOptions.find((r) => r.id === selectedRole)?.description}
                 </p>
               </div>
               <span className="shrink-0 ml-2 text-[11px] font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-md">
-                {ROLE_OPTIONS.find((r) => r.id === selectedRole)?.badge} Access
+                {roleOptions.find((r) => r.id === selectedRole)?.badge} Access
               </span>
             </div>
           </div>
@@ -746,7 +811,7 @@ export function LoginPage() {
                 <>
                   <span>
                     Sign In to{" "}
-                    {ROLE_OPTIONS.find((r) => r.id === selectedRole)?.label}{" "}
+                    {roleOptions.find((r) => r.id === selectedRole)?.label || "Role"}{" "}
                     Portal
                   </span>
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -769,7 +834,7 @@ export function LoginPage() {
 
           {/* Quick Demo Sign-in Tiles */}
           <div className="grid grid-cols-5 gap-2 sm:gap-3">
-            {ROLE_OPTIONS.map((opt) => {
+            {roleOptions.map((opt) => {
               const persona = CURRENT_USER[opt.id];
               const info = PERSONA_LABELS[opt.id];
               const isSelected = selectedRole === opt.id;

@@ -13,6 +13,7 @@ import { Route as TimetableRouteImport } from './routes/timetable'
 import { Route as SyllabusRouteImport } from './routes/syllabus'
 import { Route as StudentsRouteImport } from './routes/students'
 import { Route as StaffRouteImport } from './routes/staff'
+import { Route as RolesRouteImport } from './routes/roles'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as LoginRouteImport } from './routes/login'
@@ -37,6 +38,11 @@ const StudentsRoute = StudentsRouteImport.update({
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
   path: '/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesRoute = RolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResultsRoute = ResultsRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/performance': typeof PerformanceRoute
   '/results': typeof ResultsRoute
+  '/roles': typeof RolesRoute
   '/staff': typeof StaffRoute
   '/students': typeof StudentsRoute
   '/syllabus': typeof SyllabusRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/performance': typeof PerformanceRoute
   '/results': typeof ResultsRoute
+  '/roles': typeof RolesRoute
   '/staff': typeof StaffRoute
   '/students': typeof StudentsRoute
   '/syllabus': typeof SyllabusRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/performance': typeof PerformanceRoute
   '/results': typeof ResultsRoute
+  '/roles': typeof RolesRoute
   '/staff': typeof StaffRoute
   '/students': typeof StudentsRoute
   '/syllabus': typeof SyllabusRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/performance'
     | '/results'
+    | '/roles'
     | '/staff'
     | '/students'
     | '/syllabus'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/performance'
     | '/results'
+    | '/roles'
     | '/staff'
     | '/students'
     | '/syllabus'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/performance'
     | '/results'
+    | '/roles'
     | '/staff'
     | '/students'
     | '/syllabus'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PerformanceRoute: typeof PerformanceRoute
   ResultsRoute: typeof ResultsRoute
+  RolesRoute: typeof RolesRoute
   StaffRoute: typeof StaffRoute
   StudentsRoute: typeof StudentsRoute
   SyllabusRoute: typeof SyllabusRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/staff'
       fullPath: '/staff'
       preLoaderRoute: typeof StaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles': {
+      id: '/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof RolesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/results': {
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PerformanceRoute: PerformanceRoute,
   ResultsRoute: ResultsRoute,
+  RolesRoute: RolesRoute,
   StaffRoute: StaffRoute,
   StudentsRoute: StudentsRoute,
   SyllabusRoute: SyllabusRoute,

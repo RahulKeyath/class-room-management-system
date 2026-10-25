@@ -1,7 +1,7 @@
-export type Role = "admin" | "teacher" | "student" | "parent" | "staff";
+export type Role = "admin" | "teacher" | "student" | "parent" | "staff" | string;
 
 export const CURRENT_USER: Record<
-  Role,
+  string,
   { name: string; title: string; id: string; avatar: string }
 > = {
   admin: {

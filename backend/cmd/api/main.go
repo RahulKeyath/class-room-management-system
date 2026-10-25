@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/attendance"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/config"
+	"github.com/RahulKeyath/class-room-management-system/backend/internal/role"
 )
 
 func main() {
@@ -58,14 +58,49 @@ func main() {
 	attendanceService := attendance.NewService(pool)
 	attendanceHandler := attendance.NewHandler(attendanceService)
 
+	roleService := role.NewService(pool)
+	roleHandler := role.NewHandler(roleService)
+
+	// Ensure system permissions are initialized in the database
+	if err := roleService.SeedPermissions(ctx); err != nil {
+		log.Printf("⚠️ Warning: could not seed permissions: %v", err)
+	} else {
+		log.Println("✓ Permissions verified/seeded in database")
+	}
+
+	// Ensure default institutional roles exist in the database
+	if err := roleService.SeedRoles(ctx); err != nil {
+		log.Printf("⚠️ Warning: could not seed default roles: %v", err)
+	} else {
+		log.Println("✓ Default institutional roles verified/seeded in database")
+	}
+
+
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/roles", roleHandler.List)
+		r.Route("/departments", func(r chi.Router) {
+			r.Get("/", roleHandler.ListDepartments)
+			r.Post("/", roleHandler.CreateDepartment)
+			r.Delete("/{name}", roleHandler.DeleteDepartment)
+		})
+		r.Route("/permissions", func(r chi.Router) {
+			r.Get("/", roleHandler.ListPermissions)
+			r.Post("/seed", roleHandler.SeedPermissions)
+		})
+		r.Route("/institutional-roles", func(r chi.Router) {
+			r.Get("/", roleHandler.ListAllRoles)
+			r.Post("/", roleHandler.CreateRole)
+			r.Put("/{id}", roleHandler.UpdateRole)
+			r.Delete("/{id}", roleHandler.DeleteRole)
+		})
 		r.Route("/attendance", func(r chi.Router) {
 			r.Get("/", attendanceHandler.List)
 			r.Post("/", attendanceHandler.MarkAttendance)
 			r.Get("/{id}", attendanceHandler.GetByID)
-			r.Get("/roles", listRolesHandler(pool))
 		})
 	})
+
+
 
 	// ── Start HTTP server ───────────────────────────────────────────
 	srv := &http.Server{

@@ -9,19 +9,36 @@ import (
 )
 
 type Querier interface {
+	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
+	CountRoles(ctx context.Context) (int64, error)
+	CreateDepartment(ctx context.Context, name string) (CreateDepartmentRow, error)
+	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	// Remove an attendance record by ID.
 	DeleteAttendance(ctx context.Context, id int64) error
+	DeleteDepartment(ctx context.Context, name string) error
+	DeleteRole(ctx context.Context, id int32) error
+	DeleteRolePermissions(ctx context.Context, roleID int32) error
 	// Retrieve a single attendance record by its primary key.
 	GetAttendanceByID(ctx context.Context, id int64) (GetAttendanceByIDRow, error)
+	GetPermissionByID(ctx context.Context, id string) (Permission, error)
+	GetRoleByID(ctx context.Context, id int32) (Role, error)
+	ListActiveRoles(ctx context.Context) ([]UserRole, error)
+	ListAllRolePermissions(ctx context.Context) ([]RolePermission, error)
+	ListAllRoles(ctx context.Context) ([]Role, error)
 	// ============================================================
 	// attendance.sql — sqlc queries for the attendance domain
 	// ============================================================
 	// Retrieve all attendance records for a given class on a specific date.
 	ListAttendanceByClassAndDate(ctx context.Context, arg ListAttendanceByClassAndDateParams) ([]ListAttendanceByClassAndDateRow, error)
+	ListDepartments(ctx context.Context) ([]ListDepartmentsRow, error)
+	ListPermissions(ctx context.Context) ([]Permission, error)
+	ListRolePermissions(ctx context.Context, roleID int32) ([]string, error)
 	// Retrieve all students enrolled in a given class.
 	ListStudentsByClass(ctx context.Context, classID int64) ([]User, error)
 	// Insert or update an attendance record for a student in a class on a date.
 	MarkPresent(ctx context.Context, arg MarkPresentParams) error
+	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)
+	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) (Permission, error)
 }
 
 var _ Querier = (*Queries)(nil)
