@@ -77,7 +77,7 @@ export const LoginShowcase = memo(function LoginShowcase({
         <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-white leading-[1.2] mb-4">
           Inspiring Excellence,
           <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-indigo-100 to-white">
-            Shaping Tomorrow's Leaders.
+            Shaping the Future.
           </span>
         </h1>
 

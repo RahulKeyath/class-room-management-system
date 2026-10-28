@@ -13,143 +13,21 @@ export interface Institution {
   gradient: string;
 }
 
-export const INSTITUTIONS: Institution[] = [
-  {
-    id: "northgate",
-    name: "Northgat Academy",
-    shortName: "Northgate",
-    code: "NGA-01",
-    type: "K-12 Campus",
-    city: "Boston",
-    campus: "Main Campus",
-    domain: "northgate.edu",
-    established: 1988,
-    motto:
-      "Virtus et Scientia — Discipline in character, distinction in scholarship.",
-    gradient: "from-blue-500 to-indigo-600",
-  },
-  {
-    id: "oakridge",
-    name: "Oakridge International School",
-    shortName: "Oakridge",
-    code: "OIS-22",
-    type: "International School",
-    city: "Bengaluru",
-    campus: "Whitefield",
-    domain: "oakridge.edu",
-    established: 2001,
-    motto: "Global minds, grounded roots — learning without borders.",
-    gradient: "from-emerald-500 to-teal-600",
-  },
-  {
-    id: "stmarys",
-    name: "St. Mary's Academy",
-    shortName: "St. Mary's",
-    code: "SMA-07",
-    type: "Autonomous",
-    city: "Kochi",
-    campus: "Ernakulam",
-    domain: "stmarys.edu",
-    established: 1952,
-    motto: "Lux et Veritas — Light and truth in every endeavour.",
-    gradient: "from-rose-500 to-pink-600",
-  },
-  {
-    id: "beacon",
-    name: "Beacon Global University",
-    shortName: "Beacon",
-    code: "BGU-10",
-    type: "University",
-    city: "Singapore",
-    campus: "Marina Campus",
-    domain: "beacon.edu",
-    established: 1996,
-    motto: "Illuminating paths to research, innovation and leadership.",
-    gradient: "from-amber-500 to-orange-600",
-  },
-  {
-    id: "riverside",
-    name: "Riverside Public School",
-    shortName: "Riverside",
-    code: "RPS-03",
-    type: "K-12 Campus",
-    city: "Pune",
-    campus: "Kalyani Nagar",
-    domain: "riverside.edu",
-    established: 1979,
-    motto: "Flowing forward — curiosity, character, community.",
-    gradient: "from-sky-500 to-cyan-600",
-  },
-  {
-    id: "crestwood",
-    name: "Crestwood Institute of Technology",
-    shortName: "Crestwood",
-    code: "CIT-15",
-    type: "University",
-    city: "Chennai",
-    campus: "OMR Campus",
-    domain: "crestwood.edu",
-    established: 2008,
-    motto: "Engineering tomorrow, one discovery at a time.",
-    gradient: "from-violet-500 to-purple-600",
-  },
-];
+/**
+ * Avatar gradients used by seeded and self-registered institutions. Gradients
+ * now arrive from the API at runtime, so they are listed here to keep the
+ * classes in Tailwind's source scan.
+ */
+export const INSTITUTION_GRADIENTS = [
+  "from-blue-500 to-indigo-600",
+  "from-emerald-500 to-teal-600",
+  "from-rose-500 to-pink-600",
+  "from-amber-500 to-orange-600",
+  "from-sky-500 to-cyan-600",
+  "from-violet-500 to-purple-600",
+] as const;
 
 export const LAST_INSTITUTION_KEY = "last_selected_institution";
-export const CUSTOM_INSTITUTIONS_KEY = "custom_registered_institutions";
-
-// Parsed once per page load; invalidated whenever a new institution is registered
-let customCache: Institution[] | undefined;
-let allCache: Institution[] | undefined;
-
-function loadCustomInstitutions(): Institution[] {
-  if (typeof window === "undefined") return [];
-  if (customCache) return customCache;
-  try {
-    const parsed: unknown = JSON.parse(
-      localStorage.getItem(CUSTOM_INSTITUTIONS_KEY) ?? "[]",
-    );
-    customCache = Array.isArray(parsed) ? (parsed as Institution[]) : [];
-  } catch {
-    customCache = [];
-  }
-  return customCache;
-}
-
-/** Built-in institutions first (keeps the SSR-rendered featured grid stable), then self-registered ones. */
-export function loadAllInstitutions(): Institution[] {
-  const custom = loadCustomInstitutions();
-  if (!custom.length) return INSTITUTIONS;
-  return (allCache ??= [...INSTITUTIONS, ...custom]);
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-/** Persists a self-registered institution and returns it with a unique slug id. */
-export function registerInstitution(
-  data: Omit<Institution, "id">,
-): Institution {
-  const taken = new Set(loadAllInstitutions().map((i) => i.id));
-  const base = slugify(data.shortName) || slugify(data.code) || "institution";
-  let id = base;
-  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
-
-  const inst: Institution = { ...data, id };
-  const custom = [inst, ...loadCustomInstitutions()];
-  customCache = custom;
-  allCache = undefined;
-  try {
-    localStorage.setItem(CUSTOM_INSTITUTIONS_KEY, JSON.stringify(custom));
-  } catch {
-    // Ignore — the institution still works for this session via the cache
-  }
-  return inst;
-}
 
 export function getInstitutionInitials(inst: Institution): string {
   return inst.name
@@ -161,11 +39,13 @@ export function getInstitutionInitials(inst: Institution): string {
     .join("");
 }
 
-export function filterInstitutions(query: string): Institution[] {
+export function filterInstitutions(
+  institutions: Institution[],
+  query: string,
+): Institution[] {
   const q = query.trim().toLowerCase();
-  const all = loadAllInstitutions();
-  if (!q) return all;
-  return all.filter((i) =>
+  if (!q) return institutions;
+  return institutions.filter((i) =>
     [i.name, i.code, i.city, i.campus, i.domain, i.type].some((f) =>
       f.toLowerCase().includes(q),
     ),
@@ -174,6 +54,7 @@ export function filterInstitutions(query: string): Institution[] {
 
 /** Exact lookup by institutional code, domain (with or without subdomain / email), or id. */
 export function findInstitutionByCodeOrDomain(
+  institutions: Institution[],
   input: string,
 ): Institution | undefined {
   const q = input
@@ -183,7 +64,7 @@ export function findInstitutionByCodeOrDomain(
     .replace(/^.*@/, "")
     .replace(/\/.*$/, "");
   if (!q) return undefined;
-  return loadAllInstitutions().find(
+  return institutions.find(
     (i) =>
       i.code.toLowerCase() === q ||
       i.id === q ||
@@ -193,10 +74,9 @@ export function findInstitutionByCodeOrDomain(
   );
 }
 
-export function loadLastInstitution(): Institution | undefined {
+export function loadLastInstitutionId(): string | undefined {
   try {
-    const id = localStorage.getItem(LAST_INSTITUTION_KEY);
-    return loadAllInstitutions().find((i) => i.id === id);
+    return localStorage.getItem(LAST_INSTITUTION_KEY) ?? undefined;
   } catch {
     return undefined;
   }

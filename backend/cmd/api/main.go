@@ -16,6 +16,7 @@ import (
 
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/attendance"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/config"
+	"github.com/RahulKeyath/class-room-management-system/backend/internal/institution"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/role"
 )
 
@@ -75,9 +76,23 @@ func main() {
 		log.Println("✓ Default institutional roles verified/seeded in database")
 	}
 
+	institutionService := institution.NewService(pool)
+	institutionHandler := institution.NewHandler(institutionService)
+
+	// Ensure the demo institutions exist so existing demo accounts keep working
+	if err := institutionService.SeedDefaults(ctx); err != nil {
+		log.Printf("⚠️ Warning: could not seed default institutions: %v", err)
+	} else {
+		log.Println("✓ Default institutions verified/seeded in database")
+	}
+
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/roles", roleHandler.List)
+		r.Route("/institutions", func(r chi.Router) {
+			r.Get("/", institutionHandler.List)
+			r.Post("/", institutionHandler.Create)
+		})
 		r.Route("/departments", func(r chi.Router) {
 			r.Get("/", roleHandler.ListDepartments)
 			r.Post("/", roleHandler.CreateDepartment)

@@ -1,27 +1,22 @@
 import React, { memo, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   ArrowRight,
   Building2,
-  Check,
-  Globe,
   Loader2,
-  MapPin,
-  Palette,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import {
   type Institution,
   findInstitutionByCodeOrDomain,
-  registerInstitution,
 } from "@/lib/institutions";
-import { InstitutionAvatar } from "./institution-step";
 
 const INSTITUTION_TYPES: Institution["type"][] = [
   "K-12 Campus",
@@ -87,8 +82,26 @@ function normalizeDomain(input: string): string {
     .replace(/\/.*$/, "");
 }
 
+/** Pulls the `{"error": "..."}` message out of a failed API call, if present. */
+function apiErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  const match = message.match(/\{.*\}/);
+  if (match) {
+    try {
+      const body = JSON.parse(match[0]) as { error?: string };
+      if (body.error) return body.error;
+    } catch {
+      // Fall through to the raw message
+    }
+  }
+  return message;
+}
+
 /** Returns the first validation problem, or undefined when the form is good to submit. */
-function validate(form: FormState): string | undefined {
+function validate(
+  form: FormState,
+  institutions: Institution[],
+): string | undefined {
   if (!form.name.trim()) return "Institution full name is required.";
   if (!form.shortName.trim()) return "Short display name is required.";
   if (!form.campus.trim() || !form.city.trim())
@@ -100,9 +113,9 @@ function validate(form: FormState): string | undefined {
   const year = Number(form.established);
   if (!Number.isInteger(year) || year < 1800 || year > CURRENT_YEAR)
     return `Founding year must be between 1800 and ${CURRENT_YEAR}.`;
-  if (findInstitutionByCodeOrDomain(form.code))
+  if (findInstitutionByCodeOrDomain(institutions, form.code))
     return `Campus code ${form.code.trim().toUpperCase()} is already registered.`;
-  if (findInstitutionByCodeOrDomain(domain))
+  if (findInstitutionByCodeOrDomain(institutions, domain))
     return `The domain ${domain} is already linked to an institution.`;
   return undefined;
 }
@@ -162,6 +175,7 @@ export const RegisterInstitutionStep = memo(function RegisterInstitutionStep({
   onCancel: () => void;
   onSuccess: (inst: Institution) => void;
 }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [codeEdited, setCodeEdited] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -194,29 +208,34 @@ export const RegisterInstitutionStep = memo(function RegisterInstitutionStep({
     [form],
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    const problem = validate(form);
+    const known =
+      queryClient.getQueryData<Institution[]>(["institutions"]) ?? [];
+    const problem = validate(form, known);
     if (problem) {
       toast.error("Please review your registration", { description: problem });
       return;
     }
 
     setIsSubmitting(true);
-    // Brief settle so the loading state reads as intentional rather than a flicker
-    window.setTimeout(() => {
+    try {
       const { id: _id, ...data } = preview;
-      const inst = registerInstitution({
+      const newInst = await api.createInstitution({
         ...data,
         motto: `Est. ${data.established} — ${data.campus}, ${data.city}.`,
       });
+      await queryClient.invalidateQueries({ queryKey: ["institutions"] });
       toast.success("Institution Registered!", {
-        description: `${inst.name} is ready. Sign in to your new portal.`,
+        description: `${newInst.name} is ready. Sign in to your new portal.`,
       });
+      onSuccess(newInst);
+    } catch (err) {
+      toast.error("Registration failed", { description: apiErrorMessage(err) });
+    } finally {
       setIsSubmitting(false);
-      onSuccess(inst);
-    }, 450);
+    }
   };
 
   return (
@@ -363,76 +382,6 @@ export const RegisterInstitutionStep = memo(function RegisterInstitutionStep({
           </div>
         </section>
 
-        {/* Brand & Avatar Preset */}
-        <section className="rounded-2xl border border-border/80 bg-card/60 p-4 sm:p-5 shadow-xs">
-          <SectionHeading
-            icon={Palette}
-            title="Brand & Avatar Preset"
-            hint="Pick a signature gradient for your campus identity"
-          />
-          <div
-            role="radiogroup"
-            aria-label="Brand gradient"
-            className="flex flex-wrap items-center gap-2.5 mb-4"
-          >
-            {GRADIENT_PRESETS.map((preset) => {
-              const active = form.gradient === preset.value;
-              return (
-                <button
-                  key={preset.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  aria-label={preset.label}
-                  title={preset.label}
-                  onClick={() => update("gradient", preset.value)}
-                  className={`h-9 w-9 rounded-full bg-gradient-to-br ${preset.value} flex items-center justify-center text-white shadow-md transition-all cursor-pointer focus-visible:outline-none ${
-                    active
-                      ? "ring-2 ring-offset-2 ring-offset-background ring-accent scale-110"
-                      : "opacity-80 hover:opacity-100 hover:scale-105"
-                  }`}
-                >
-                  {active && <Check className="h-4 w-4" />}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Live Preview — mirrors the card on the institution search screen */}
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-            Live Preview
-          </p>
-          <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-card border border-accent/40 ring-2 ring-accent/10 shadow-lg shadow-accent/5">
-            <InstitutionAvatar institution={preview} size="md" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-foreground truncate">
-                {preview.name}
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-4.5 font-medium bg-muted/80 text-muted-foreground"
-                >
-                  {preview.type}
-                </Badge>
-                <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 font-medium">
-                  <MapPin className="h-2.5 w-2.5 text-muted-foreground/70" />
-                  {preview.city}
-                </span>
-                <span className="text-[11px] font-mono text-muted-foreground/80">
-                  {preview.code}
-                </span>
-              </div>
-              <p className="text-[11px] font-mono text-muted-foreground/80 mt-1 truncate flex items-center gap-1">
-                <Globe className="h-3 w-3 shrink-0 text-accent/70" />
-                {preview.domain}
-              </p>
-            </div>
-            <div className="h-7 w-7 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0">
-              <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </div>
-        </section>
 
         {/* Actions */}
         <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-1">

@@ -1,19 +1,24 @@
 import React, { memo, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertCircle,
   ArrowRight,
   Building2,
   Globe,
   History,
+  Loader2,
   MapPin,
   Plus,
+  RefreshCw,
   Search,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import {
   type Institution,
   filterInstitutions,
@@ -55,7 +60,19 @@ export const InstitutionStep = memo(function InstitutionStep({
 }) {
   const [query, setQuery] = useState("");
   const [manualCode, setManualCode] = useState("");
-  const results = useMemo(() => filterInstitutions(query), [query]);
+  const {
+    data: institutions = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["institutions"],
+    queryFn: api.getInstitutions,
+  });
+  const results = useMemo(
+    () => filterInstitutions(institutions, query),
+    [institutions, query],
+  );
 
   // Curate to top 4 featured campuses when idle, or up to 6 matches on search (no scrollbar)
   const displayedInstitutions = useMemo(() => {
@@ -67,7 +84,7 @@ export const InstitutionStep = memo(function InstitutionStep({
 
   const handleFind = (e: React.FormEvent) => {
     e.preventDefault();
-    const match = findInstitutionByCodeOrDomain(manualCode);
+    const match = findInstitutionByCodeOrDomain(institutions, manualCode);
     if (match) {
       onSelect(match);
     } else {
@@ -81,7 +98,7 @@ export const InstitutionStep = memo(function InstitutionStep({
   return (
     <div className="animate-in fade-in slide-in-from-left-4 duration-300">
       {/* Header */}
-      <div className="mb-5 text-left">
+      <div className="mb-4 text-left">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-semibold mb-2.5 border border-accent/20">
           <Building2 className="h-3.5 w-3.5" />
           <span>Institutional Single Sign-On</span>
@@ -95,45 +112,9 @@ export const InstitutionStep = memo(function InstitutionStep({
         </p>
       </div>
 
-      {/* Hero Search Bar — The Centerpiece of this Screen */}
-      <div className="relative mb-5">
-        <div className="relative rounded-2xl bg-card border-2 border-border/80 focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/15 shadow-md shadow-black/5 hover:border-accent/40 transition-all duration-300 group">
-          <div className="flex items-center h-14 sm:h-15 px-4 gap-3">
-            <div className="h-9 w-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0 transition-transform group-focus-within:scale-105">
-              <Search className="h-4.5 w-4.5" />
-            </div>
-            <Input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Type institution name, campus, domain, or code..."
-              aria-label="Search institutions"
-              className="h-full border-0 shadow-none bg-transparent text-sm sm:text-base font-medium placeholder:text-muted-foreground/60 focus-visible:ring-0 px-0"
-            />
-            {query ? (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground/75 font-mono shrink-0 select-none">
-                <span className="px-2 py-0.5 rounded-md bg-muted/70 border border-border/80 text-[11px] font-semibold">
-                  Search
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Quick Resume Recent Session Banner (if present and user hasn't typed a query) */}
       {remembered && !query && (
-        <div className="mb-5 p-3 rounded-2xl border border-accent/40 bg-gradient-to-r from-accent/10 via-accent/5 to-transparent flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
+        <div className="mb-4 p-3 rounded-2xl border border-accent/40 bg-gradient-to-r from-accent/10 via-accent/5 to-transparent flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
           <div className="flex items-center gap-3 min-w-0">
             <InstitutionAvatar institution={remembered} size="sm" />
             <div className="min-w-0">
@@ -172,18 +153,77 @@ export const InstitutionStep = memo(function InstitutionStep({
         </div>
       )}
 
+      {/* Hero Search Bar — The Centerpiece of this Screen */}
+      <div className="relative mb-5">
+        <div className="relative rounded-2xl bg-card border-2 border-border/80 focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/15 shadow-md shadow-black/5 hover:border-accent/40 transition-all duration-300 group">
+          <div className="flex items-center h-14 sm:h-15 px-4 gap-3">
+            <div className="h-9 w-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0 transition-transform group-focus-within:scale-105">
+              <Search className="h-4.5 w-4.5" />
+            </div>
+            <Input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Type institution name, campus, domain, or code..."
+              aria-label="Search institutions"
+              className="h-full border-0 shadow-none bg-transparent text-sm sm:text-base font-medium placeholder:text-muted-foreground/60 focus-visible:ring-0 px-0"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground/75 font-mono shrink-0 select-none">
+                <span className="px-2 py-0.5 rounded-md bg-muted/70 border border-border/80 text-[11px] font-semibold">
+                  Search
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Grid Subheader */}
       <div className="flex items-center justify-between mb-3 px-1">
         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           {query ? "Search Results" : "Featured Institutions"}
         </span>
-        <span className="text-[11px] font-mono text-muted-foreground">
-          {displayedInstitutions.length} shown
+        <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+          {isLoading ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Loading
+            </>
+          ) : (
+            `${displayedInstitutions.length} shown`
+          )}
         </span>
       </div>
 
       {/* Curated Institution Grid — No Inner Scrollbar */}
-      {displayedInstitutions.length > 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-busy="true">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-card border border-border/80 animate-pulse"
+            >
+              <div className="h-11 w-11 rounded-xl bg-muted shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-3/4 rounded bg-muted" />
+                <div className="h-2.5 w-1/2 rounded bg-muted/70" />
+                <div className="h-2.5 w-2/3 rounded bg-muted/70" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : displayedInstitutions.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {displayedInstitutions.map((inst) => {
             const isRemembered = remembered?.id === inst.id;
@@ -234,6 +274,27 @@ export const InstitutionStep = memo(function InstitutionStep({
               </button>
             );
           })}
+        </div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+          <div className="h-10 w-10 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-2">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <p className="text-sm font-semibold text-foreground">
+            Unable to connect to the database
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            Please make sure the backend Go API server is running on port 8000.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refetch()}
+            className="mt-3.5 h-8 text-xs cursor-pointer gap-1.5"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry Connection
+          </Button>
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-border/80 p-8 text-center bg-card/40">

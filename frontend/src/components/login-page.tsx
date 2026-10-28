@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { Role } from "@/lib/mock-data";
 import {
   type Institution,
-  loadLastInstitution,
+  loadLastInstitutionId,
   saveLastInstitution,
 } from "@/lib/institutions";
 import {
@@ -36,10 +38,20 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [helpOpen, setHelpOpen] = useState<boolean>(false);
 
-  // localStorage is only available client-side, so read it after mount
+  const { data: institutions } = useQuery({
+    queryKey: ["institutions"],
+    queryFn: api.getInstitutions,
+  });
+
+  // localStorage is only available client-side, so resolve the remembered
+  // campus after mount — once, when the institution list first loads
+  const rememberedResolved = useRef(false);
   useEffect(() => {
-    setRemembered(loadLastInstitution());
-  }, []);
+    if (!institutions || rememberedResolved.current) return;
+    rememberedResolved.current = true;
+    const id = loadLastInstitutionId();
+    setRemembered(institutions.find((i) => i.id === id));
+  }, [institutions]);
 
   const authenticate = useCallback(
     async (role: Role, creds: Credentials, quick = false) => {

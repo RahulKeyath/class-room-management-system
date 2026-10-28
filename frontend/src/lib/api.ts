@@ -1,4 +1,5 @@
 // frontend/src/lib/api.ts
+import type { Institution } from "@/lib/institutions";
 
 const rawUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000").trim();
 // Automatically ensure localhost development uses http:// to prevent SSL protocol errors
@@ -108,10 +109,21 @@ export interface UpdateRolePayload {
   permissions: string[];
 }
 
+/* ── Institution Types (Matching backend Go models) ────────── */
+export type CreateInstitutionPayload = Omit<Institution, "id">;
+
 /* ── API Methods ─────────────────────────────────────────── */
 export const api = {
   // Health check
   getHealth: () => fetchAPI<{ status: string; time: string }>("/health"),
+
+  // Institution endpoints
+  getInstitutions: () => fetchAPI<Institution[]>("/api/v1/institutions"),
+  createInstitution: (payload: CreateInstitutionPayload) =>
+    fetchAPI<Institution>("/api/v1/institutions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   // Role & Department endpoints
   getUserRoles: () => fetchAPI<DbUserRole[]>("/api/v1/roles"),
