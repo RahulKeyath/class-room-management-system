@@ -19,6 +19,7 @@ import {
   LoginShowcase,
   MobileBrand,
   QuickLoginGrid,
+  RegisterInstitutionStep,
   RoleRibbon,
 } from "@/components/auth";
 
@@ -91,6 +92,7 @@ export function LoginPage() {
   const forget = useCallback(() => setRemembered(undefined), []);
   const switchInstitution = useCallback(() => setStep("institution"), []);
   const openHelp = useCallback(() => setHelpOpen(true), []);
+  const openRegister = useCallback(() => setStep("register-institution"), []);
 
   return (
     <div className="min-h-screen w-full flex bg-background text-foreground antialiased selection:bg-accent/20">
@@ -101,11 +103,17 @@ export function LoginPage() {
         <div className="w-full max-w-2xl xl:max-w-3xl mx-auto my-auto py-2 sm:py-4">
           <MobileBrand institution={institution} />
 
-          {step === "institution" || !institution ? (
+          {step === "register-institution" ? (
+            <RegisterInstitutionStep
+              onCancel={switchInstitution}
+              onSuccess={handleSelectInstitution}
+            />
+          ) : step === "institution" || !institution ? (
             <InstitutionStep
               remembered={remembered}
               onSelect={handleSelectInstitution}
               onForgetRemembered={forget}
+              onRegisterClick={openRegister}
             />
           ) : (
             <div

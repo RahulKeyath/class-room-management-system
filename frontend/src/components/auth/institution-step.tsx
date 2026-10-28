@@ -9,6 +9,7 @@ import {
   Globe,
   History,
   MapPin,
+  Plus,
   Search,
   X,
 } from "lucide-react";
@@ -45,10 +46,12 @@ export const InstitutionStep = memo(function InstitutionStep({
   remembered,
   onSelect,
   onForgetRemembered,
+  onRegisterClick,
 }: {
   remembered?: Institution;
   onSelect: (inst: Institution) => void;
   onForgetRemembered: () => void;
+  onRegisterClick: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [manualCode, setManualCode] = useState("");
@@ -254,6 +257,26 @@ export const InstitutionStep = memo(function InstitutionStep({
           </Button>
         </div>
       )}
+
+      {/* Self-service onboarding callout */}
+      <button
+        type="button"
+        onClick={onRegisterClick}
+        className="group mt-4 w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-dashed border-accent/30 bg-gradient-to-r from-accent/[0.06] via-transparent to-transparent text-left transition-all duration-200 hover:border-accent/60 hover:border-solid hover:shadow-lg hover:shadow-accent/10 hover:ring-2 hover:ring-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-8 w-8 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0 transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+            <Plus className="h-4 w-4" />
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Don't see your campus listed?{" "}
+            <span className="font-semibold text-foreground group-hover:text-accent transition-colors">
+              Register New Institution
+            </span>
+          </p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-accent shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </button>
 
       {/* Manual code / domain fallback */}
       <form

@@ -16,7 +16,7 @@ export interface Institution {
 export const INSTITUTIONS: Institution[] = [
   {
     id: "northgate",
-    name: "Northgate Academy",
+    name: "Northgat Academy",
     shortName: "Northgate",
     code: "NGA-01",
     type: "K-12 Campus",
@@ -96,6 +96,60 @@ export const INSTITUTIONS: Institution[] = [
 ];
 
 export const LAST_INSTITUTION_KEY = "last_selected_institution";
+export const CUSTOM_INSTITUTIONS_KEY = "custom_registered_institutions";
+
+// Parsed once per page load; invalidated whenever a new institution is registered
+let customCache: Institution[] | undefined;
+let allCache: Institution[] | undefined;
+
+function loadCustomInstitutions(): Institution[] {
+  if (typeof window === "undefined") return [];
+  if (customCache) return customCache;
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(CUSTOM_INSTITUTIONS_KEY) ?? "[]",
+    );
+    customCache = Array.isArray(parsed) ? (parsed as Institution[]) : [];
+  } catch {
+    customCache = [];
+  }
+  return customCache;
+}
+
+/** Built-in institutions first (keeps the SSR-rendered featured grid stable), then self-registered ones. */
+export function loadAllInstitutions(): Institution[] {
+  const custom = loadCustomInstitutions();
+  if (!custom.length) return INSTITUTIONS;
+  return (allCache ??= [...INSTITUTIONS, ...custom]);
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Persists a self-registered institution and returns it with a unique slug id. */
+export function registerInstitution(
+  data: Omit<Institution, "id">,
+): Institution {
+  const taken = new Set(loadAllInstitutions().map((i) => i.id));
+  const base = slugify(data.shortName) || slugify(data.code) || "institution";
+  let id = base;
+  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+
+  const inst: Institution = { ...data, id };
+  const custom = [inst, ...loadCustomInstitutions()];
+  customCache = custom;
+  allCache = undefined;
+  try {
+    localStorage.setItem(CUSTOM_INSTITUTIONS_KEY, JSON.stringify(custom));
+  } catch {
+    // Ignore — the institution still works for this session via the cache
+  }
+  return inst;
+}
 
 export function getInstitutionInitials(inst: Institution): string {
   return inst.name
@@ -109,8 +163,9 @@ export function getInstitutionInitials(inst: Institution): string {
 
 export function filterInstitutions(query: string): Institution[] {
   const q = query.trim().toLowerCase();
-  if (!q) return INSTITUTIONS;
-  return INSTITUTIONS.filter((i) =>
+  const all = loadAllInstitutions();
+  if (!q) return all;
+  return all.filter((i) =>
     [i.name, i.code, i.city, i.campus, i.domain, i.type].some((f) =>
       f.toLowerCase().includes(q),
     ),
@@ -128,7 +183,7 @@ export function findInstitutionByCodeOrDomain(
     .replace(/^.*@/, "")
     .replace(/\/.*$/, "");
   if (!q) return undefined;
-  return INSTITUTIONS.find(
+  return loadAllInstitutions().find(
     (i) =>
       i.code.toLowerCase() === q ||
       i.id === q ||
@@ -141,7 +196,7 @@ export function findInstitutionByCodeOrDomain(
 export function loadLastInstitution(): Institution | undefined {
   try {
     const id = localStorage.getItem(LAST_INSTITUTION_KEY);
-    return INSTITUTIONS.find((i) => i.id === id);
+    return loadAllInstitutions().find((i) => i.id === id);
   } catch {
     return undefined;
   }

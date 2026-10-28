@@ -11,7 +11,7 @@ import { ROLE_CREDENTIALS } from "@/lib/auth-types";
 import { CURRENT_USER, type Role } from "@/lib/mock-data";
 import { type Institution, emailForInstitution } from "@/lib/institutions";
 
-export type AuthStep = "institution" | "login";
+export type AuthStep = "institution" | "login" | "register-institution";
 
 export interface RoleOption {
   id: Role;
