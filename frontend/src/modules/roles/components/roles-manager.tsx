@@ -126,7 +126,7 @@ export function RolesManager() {
       if (Array.isArray(data)) {
         const institutionId = loadLastInstitutionId();
         const mapped = data
-          .filter((r) => !institutionId || r.institutionId === institutionId)
+          .filter((r) => institutionId === undefined || r.institutionId === institutionId)
           .map(mapDbRoleToItem);
         setRoles(mapped);
         if (mapped.length > 0) {
@@ -263,7 +263,7 @@ export function RolesManager() {
       } else {
         // Create new role in PostgreSQL database (roles and role_permissions tables)
         const createdDbRole = await api.createInstitutionalRole({
-          institutionId: loadLastInstitutionId() ?? "",
+          institutionId: loadLastInstitutionId() ?? 1,
           name: formData.name,
           slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
           department: formData.department,

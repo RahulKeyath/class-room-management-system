@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS institutions (
-    id          VARCHAR(60) PRIMARY KEY,
+    id          SERIAL PRIMARY KEY,
     name        VARCHAR(255) NOT NULL,
     short_name  VARCHAR(100) NOT NULL,
     code        VARCHAR(50) NOT NULL UNIQUE,

@@ -34,7 +34,7 @@ type RoleDetail struct {
 	Permissions    []string `json:"permissions"`
 	CreatedAt      string   `json:"createdAt"`
 	UpdatedAt      string   `json:"updatedAt"`
-	InstitutionID  string   `json:"institutionId"`
+	InstitutionID  int32    `json:"institutionId"`
 }
 
 // CreateRoleRequest is the JSON body for POST /api/v1/roles
@@ -47,7 +47,7 @@ type CreateRoleRequest struct {
 	Color         string   `json:"color"`
 	IconName      string   `json:"iconName"`
 	Permissions   []string `json:"permissions"`
-	InstitutionID string   `json:"institutionId"`
+	InstitutionID int32    `json:"institutionId"`
 }
 
 // UpdateRoleRequest is the JSON body for PUT /api/v1/roles/{id}
@@ -60,5 +60,5 @@ type UpdateRoleRequest struct {
 	Color         string   `json:"color"`
 	IconName      string   `json:"iconName"`
 	Permissions   []string `json:"permissions"`
-	InstitutionID string   `json:"institutionId"`
+	InstitutionID int32    `json:"institutionId"`
 }

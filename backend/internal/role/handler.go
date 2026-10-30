@@ -120,8 +120,13 @@ func (h *Handler) ListAllRoles(w http.ResponseWriter, r *http.Request) {
 		roles []RoleDetail
 		err   error
 	)
-	if institutionID := r.URL.Query().Get("institution_id"); institutionID != "" {
-		roles, err = h.service.ListByInstitution(r.Context(), institutionID)
+	if instStr := r.URL.Query().Get("institution_id"); instStr != "" {
+		instID, parseErr := strconv.Atoi(instStr)
+		if parseErr != nil || instID <= 0 {
+			http.Error(w, `{"error":"invalid institution_id parameter"}`, http.StatusBadRequest)
+			return
+		}
+		roles, err = h.service.ListByInstitution(r.Context(), int32(instID))
 	} else {
 		roles, err = h.service.ListAllRoles(r.Context())
 	}
@@ -146,9 +151,8 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"role name is required"}`, http.StatusBadRequest)
 		return
 	}
-	req.InstitutionID = strings.TrimSpace(req.InstitutionID)
-	if req.InstitutionID == "" {
-		http.Error(w, `{"error":"institution id is required"}`, http.StatusBadRequest)
+	if req.InstitutionID <= 0 {
+		http.Error(w, `{"error":"valid institution id is required"}`, http.StatusBadRequest)
 		return
 	}
 	req.Slug = strings.TrimSpace(req.Slug)

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,11 +17,9 @@ const defaultGradient = "from-blue-500 to-indigo-600"
 
 const selectColumns = `id, name, short_name, code, type, city, campus, domain, established, COALESCE(motto, ''), gradient`
 
-var nonAlphanumeric = regexp.MustCompile(`[^a-z0-9]+`)
-
 // RoleSeeder creates the default roles of a newly registered institution.
 type RoleSeeder interface {
-	SeedInstitutionRoles(ctx context.Context, tx pgx.Tx, institutionID string) error
+	SeedInstitutionRoles(ctx context.Context, tx pgx.Tx, institutionID int32) error
 }
 
 // Service encapsulates the business logic for institutions.
@@ -71,42 +67,12 @@ func (s *Service) List(ctx context.Context) ([]Institution, error) {
 	return institutions, rows.Err()
 }
 
-func slugify(value string) string {
-	return strings.Trim(nonAlphanumeric.ReplaceAllString(strings.ToLower(value), "-"), "-")
-}
-
-// uniqueID derives a slug from shortName/code and suffixes it until it is unused.
-func (s *Service) uniqueID(ctx context.Context, req CreateInstitutionRequest) (string, error) {
-	base := slugify(req.ShortName)
-	if base == "" {
-		base = slugify(req.Code)
-	}
-	if base == "" {
-		base = "institution"
-	}
-	if len(base) > 50 {
-		base = strings.Trim(base[:50], "-")
-	}
-
-	id := base
-	for n := 2; ; n++ {
-		var exists bool
-		if err := s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM institutions WHERE id = $1)`, id).Scan(&exists); err != nil {
-			return "", fmt.Errorf("failed to check institution id: %w", err)
-		}
-		if !exists {
-			return id, nil
-		}
-		id = fmt.Sprintf("%s-%d", base, n)
-	}
-}
-
 func (s *Service) insert(ctx context.Context, q rowQuerier, i Institution) (*Institution, error) {
 	row := q.QueryRow(ctx, `
-		INSERT INTO institutions (id, name, short_name, code, type, city, campus, domain, established, motto, gradient)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO institutions (name, short_name, code, type, city, campus, domain, established, motto, gradient)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING `+selectColumns,
-		i.ID, i.Name, i.ShortName, i.Code, i.Type, i.City, i.Campus, i.Domain, i.Established, i.Motto, i.Gradient)
+		i.Name, i.ShortName, i.Code, i.Type, i.City, i.Campus, i.Domain, i.Established, i.Motto, i.Gradient)
 	created, err := scanInstitution(row)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -118,12 +84,8 @@ func (s *Service) insert(ctx context.Context, q rowQuerier, i Institution) (*Ins
 	return &created, nil
 }
 
-// Create registers a new institution with a generated slug ID and its default roles (transactional).
+// Create registers a new institution with an auto-incrementing serial ID and its default roles (transactional).
 func (s *Service) Create(ctx context.Context, req CreateInstitutionRequest) (*Institution, error) {
-	id, err := s.uniqueID(ctx, req)
-	if err != nil {
-		return nil, err
-	}
 	gradient := req.Gradient
 	if gradient == "" {
 		gradient = defaultGradient
@@ -136,7 +98,6 @@ func (s *Service) Create(ctx context.Context, req CreateInstitutionRequest) (*In
 	defer tx.Rollback(ctx)
 
 	created, err := s.insert(ctx, tx, Institution{
-		ID:          id,
 		Name:        req.Name,
 		ShortName:   req.ShortName,
 		Code:        req.Code,
@@ -152,7 +113,7 @@ func (s *Service) Create(ctx context.Context, req CreateInstitutionRequest) (*In
 		return nil, err
 	}
 	if err := s.roleSeeder.SeedInstitutionRoles(ctx, tx, created.ID); err != nil {
-		return nil, fmt.Errorf("failed to seed roles for %s: %w", created.ID, err)
+		return nil, fmt.Errorf("failed to seed roles for institution %d: %w", created.ID, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit institution: %w", err)
@@ -171,7 +132,7 @@ func (s *Service) SeedDefaults(ctx context.Context) error {
 	}
 	for _, inst := range defaultInstitutions {
 		if _, err := s.insert(ctx, s.pool, inst); err != nil {
-			return fmt.Errorf("failed to seed %s: %w", inst.ID, err)
+			return fmt.Errorf("failed to seed %s: %w", inst.ShortName, err)
 		}
 	}
 	return nil

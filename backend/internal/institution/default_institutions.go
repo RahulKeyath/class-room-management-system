@@ -3,7 +3,6 @@ package institution
 // defaultInstitutions are seeded on first boot so the demo accounts keep working.
 var defaultInstitutions = []Institution{
 	{
-		ID:          "northgate",
 		Name:        "Northgate Academy",
 		ShortName:   "Northgate",
 		Code:        "NGA-01",
@@ -16,7 +15,6 @@ var defaultInstitutions = []Institution{
 		Gradient:    "from-blue-500 to-indigo-600",
 	},
 	{
-		ID:          "oakridge",
 		Name:        "Oakridge International School",
 		ShortName:   "Oakridge",
 		Code:        "OIS-22",
@@ -29,7 +27,6 @@ var defaultInstitutions = []Institution{
 		Gradient:    "from-emerald-500 to-teal-600",
 	},
 	{
-		ID:          "stmarys",
 		Name:        "St. Mary's Academy",
 		ShortName:   "St. Mary's",
 		Code:        "SMA-07",
@@ -42,7 +39,6 @@ var defaultInstitutions = []Institution{
 		Gradient:    "from-rose-500 to-pink-600",
 	},
 	{
-		ID:          "beacon",
 		Name:        "Beacon Global University",
 		ShortName:   "Beacon",
 		Code:        "BGU-10",
@@ -55,7 +51,6 @@ var defaultInstitutions = []Institution{
 		Gradient:    "from-amber-500 to-orange-600",
 	},
 	{
-		ID:          "riverside",
 		Name:        "Riverside Public School",
 		ShortName:   "Riverside",
 		Code:        "RPS-03",
@@ -68,7 +63,6 @@ var defaultInstitutions = []Institution{
 		Gradient:    "from-sky-500 to-cyan-600",
 	},
 	{
-		ID:          "crestwood",
 		Name:        "Crestwood Institute of Technology",
 		ShortName:   "Crestwood",
 		Code:        "CIT-15",

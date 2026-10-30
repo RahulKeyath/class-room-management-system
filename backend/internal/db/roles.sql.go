@@ -56,7 +56,7 @@ type CreateRoleParams struct {
 	IsSystem       bool        `json:"is_system"`
 	Color          string      `json:"color"`
 	IconName       string      `json:"icon_name"`
-	InstitutionID  string      `json:"institution_id"`
+	InstitutionID  int32       `json:"institution_id"`
 }
 
 func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error) {
@@ -280,15 +280,15 @@ WHERE NOT EXISTS (SELECT 1 FROM roles r WHERE r.institution_id = i.id)
 ORDER BY i.id ASC
 `
 
-func (q *Queries) ListInstitutionsWithoutRoles(ctx context.Context) ([]string, error) {
+func (q *Queries) ListInstitutionsWithoutRoles(ctx context.Context) ([]int32, error) {
 	rows, err := q.db.Query(ctx, listInstitutionsWithoutRoles)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []int32
 	for rows.Next() {
-		var id string
+		var id int32
 		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
@@ -360,7 +360,7 @@ WHERE institution_id = $1 AND status = 'active'
 ORDER BY is_system DESC, id ASC
 `
 
-func (q *Queries) ListRolesByInstitution(ctx context.Context, institutionID string) ([]Role, error) {
+func (q *Queries) ListRolesByInstitution(ctx context.Context, institutionID int32) ([]Role, error) {
 	rows, err := q.db.Query(ctx, listRolesByInstitution, institutionID)
 	if err != nil {
 		return nil, err

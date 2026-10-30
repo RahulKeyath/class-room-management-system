@@ -1,5 +1,5 @@
 export interface Institution {
-  id: string;
+  id: number;
   name: string;
   shortName: string;
   code: string;
@@ -64,19 +64,22 @@ export function findInstitutionByCodeOrDomain(
     .replace(/^.*@/, "")
     .replace(/\/.*$/, "");
   if (!q) return undefined;
+  const numQ = Number(q);
   return institutions.find(
     (i) =>
       i.code.toLowerCase() === q ||
-      i.id === q ||
+      (!Number.isNaN(numQ) && i.id === numQ) ||
       i.domain === q ||
-      q.endsWith(`.${i.domain}`) ||
-      q.split(".")[0] === i.id,
+      q.endsWith(`.${i.domain}`),
   );
 }
 
-export function loadLastInstitutionId(): string | undefined {
+export function loadLastInstitutionId(): number | undefined {
   try {
-    return localStorage.getItem(LAST_INSTITUTION_KEY) ?? undefined;
+    const raw = localStorage.getItem(LAST_INSTITUTION_KEY);
+    if (!raw) return undefined;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : undefined;
   } catch {
     return undefined;
   }
@@ -84,7 +87,7 @@ export function loadLastInstitutionId(): string | undefined {
 
 export function saveLastInstitution(inst: Institution) {
   try {
-    localStorage.setItem(LAST_INSTITUTION_KEY, inst.id);
+    localStorage.setItem(LAST_INSTITUTION_KEY, String(inst.id));
   } catch {
     // Ignore
   }

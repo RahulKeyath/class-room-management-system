@@ -2,7 +2,7 @@ package institution
 
 // Institution is a campus tenant that users pick on the login screen.
 type Institution struct {
-	ID          string `json:"id"`
+	ID          int32  `json:"id"`
 	Name        string `json:"name"`
 	ShortName   string `json:"shortName"`
 	Code        string `json:"code"`

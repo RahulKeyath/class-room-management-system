@@ -38,7 +38,7 @@ type Department struct {
 }
 
 type Institution struct {
-	ID          string             `json:"id"`
+	ID          int32              `json:"id"`
 	Name        string             `json:"name"`
 	ShortName   string             `json:"short_name"`
 	Code        string             `json:"code"`
@@ -72,7 +72,7 @@ type Role struct {
 	IconName       string             `json:"icon_name"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	InstitutionID  string             `json:"institution_id"`
+	InstitutionID  int32              `json:"institution_id"`
 }
 
 type RolePermission struct {

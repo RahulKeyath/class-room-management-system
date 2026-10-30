@@ -30,10 +30,10 @@ type Querier interface {
 	// Retrieve all attendance records for a given class on a specific date.
 	ListAttendanceByClassAndDate(ctx context.Context, arg ListAttendanceByClassAndDateParams) ([]ListAttendanceByClassAndDateRow, error)
 	ListDepartments(ctx context.Context) ([]ListDepartmentsRow, error)
-	ListInstitutionsWithoutRoles(ctx context.Context) ([]string, error)
+	ListInstitutionsWithoutRoles(ctx context.Context) ([]int32, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
 	ListRolePermissions(ctx context.Context, roleID int32) ([]string, error)
-	ListRolesByInstitution(ctx context.Context, institutionID string) ([]Role, error)
+	ListRolesByInstitution(ctx context.Context, institutionID int32) ([]Role, error)
 	// Retrieve all students enrolled in a given class.
 	ListStudentsByClass(ctx context.Context, classID int64) ([]User, error)
 	// Insert or update an attendance record for a student in a class on a date.

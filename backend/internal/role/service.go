@@ -235,10 +235,10 @@ func (s *Service) ListAllRoles(ctx context.Context) ([]RoleDetail, error) {
 }
 
 // ListByInstitution returns the active roles of one institution with their permissions.
-func (s *Service) ListByInstitution(ctx context.Context, institutionID string) ([]RoleDetail, error) {
+func (s *Service) ListByInstitution(ctx context.Context, institutionID int32) ([]RoleDetail, error) {
 	dbRoles, err := s.q.ListRolesByInstitution(ctx, institutionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list roles for institution %s: %w", institutionID, err)
+		return nil, fmt.Errorf("failed to list roles for institution %d: %w", institutionID, err)
 	}
 	return s.withPermissions(ctx, dbRoles)
 }
@@ -276,7 +276,7 @@ func (s *Service) UpdateRole(ctx context.Context, id int32, req UpdateRoleReques
 
 	qtx := s.q.WithTx(tx)
 
-	if req.InstitutionID != "" {
+	if req.InstitutionID > 0 {
 		existing, err := qtx.GetRoleByID(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load role: %w", err)
@@ -375,7 +375,7 @@ func (s *Service) SeedRoles(ctx context.Context) error {
 			return err
 		}
 		if err := tx.Commit(ctx); err != nil {
-			return fmt.Errorf("failed to commit seed roles for %s: %w", institutionID, err)
+			return fmt.Errorf("failed to commit seed roles for institution %d: %w", institutionID, err)
 		}
 	}
 
@@ -383,7 +383,7 @@ func (s *Service) SeedRoles(ctx context.Context) error {
 }
 
 // SeedInstitutionRoles creates the canonical default roles for one institution within tx.
-func (s *Service) SeedInstitutionRoles(ctx context.Context, tx pgx.Tx, institutionID string) error {
+func (s *Service) SeedInstitutionRoles(ctx context.Context, tx pgx.Tx, institutionID int32) error {
 	qtx := s.q.WithTx(tx)
 
 	for _, dr := range DefaultInitialRoles {
@@ -407,7 +407,7 @@ func (s *Service) SeedInstitutionRoles(ctx context.Context, tx pgx.Tx, instituti
 			InstitutionID:  institutionID,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to seed role %s for %s: %w", dr.Name, institutionID, err)
+			return fmt.Errorf("failed to seed role %s for institution %d: %w", dr.Name, institutionID, err)
 		}
 
 		for _, permID := range dr.Permissions {
