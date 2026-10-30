@@ -60,6 +60,7 @@ import { RoleDetailsPanel } from "./role-details-panel";
 import { DepartmentManagerDialog } from "./department-manager-dialog";
 import { useRole } from "@/lib/role-context";
 import { api, type DbInstitutionalRole } from "@/lib/api";
+import { loadLastInstitutionId } from "@/lib/institutions";
 
 const mapDbRoleToItem = (dbRole: DbInstitutionalRole): UserRoleItem => ({
   id: String(dbRole.id),
@@ -120,9 +121,13 @@ export function RolesManager() {
   const loadRoles = async () => {
     try {
       setIsLoadingRoles(true);
+      // The unscoped list keeps inactive roles manageable; narrow it to the signed-in institution
       const data = await api.getInstitutionalRoles();
       if (Array.isArray(data)) {
-        const mapped = data.map(mapDbRoleToItem);
+        const institutionId = loadLastInstitutionId();
+        const mapped = data
+          .filter((r) => !institutionId || r.institutionId === institutionId)
+          .map(mapDbRoleToItem);
         setRoles(mapped);
         if (mapped.length > 0) {
           setSelectedRoleId((prev) => (prev && mapped.some((r) => r.id === prev) ? prev : mapped[0].id));
@@ -258,6 +263,7 @@ export function RolesManager() {
       } else {
         // Create new role in PostgreSQL database (roles and role_permissions tables)
         const createdDbRole = await api.createInstitutionalRole({
+          institutionId: loadLastInstitutionId() ?? "",
           name: formData.name,
           slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
           department: formData.department,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, type DbInstitutionalRole } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { Role } from "@/lib/mock-data";
 import {
@@ -12,7 +12,6 @@ import {
   type AuthStep,
   type Credentials,
   getDemoCredentials,
-  getRoleOption,
   notifyAuthResult,
   CredentialsForm,
   InstitutionStep,
@@ -24,6 +23,8 @@ import {
   RegisterInstitutionStep,
   RoleRibbon,
 } from "@/components/auth";
+
+const NO_ROLES: DbInstitutionalRole[] = [];
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -43,6 +44,13 @@ export function LoginPage() {
     queryFn: api.getInstitutions,
   });
 
+  const { data: dbRoles, isLoading: isRolesLoading } = useQuery({
+    queryKey: ["institutional-roles", institution?.id],
+    queryFn: () => api.getInstitutionalRoles(institution!.id),
+    enabled: !!institution?.id,
+  });
+  const roles = dbRoles ?? NO_ROLES;
+
   // localStorage is only available client-side, so resolve the remembered
   // campus after mount — once, when the institution list first loads
   const rememberedResolved = useRef(false);
@@ -58,14 +66,15 @@ export function LoginPage() {
       setIsLoading(true);
       try {
         await login(role, creds);
-        notifyAuthResult(role, true, quick);
+        const label = roles.find((r) => r.slug === role)?.name;
+        notifyAuthResult(role, true, quick, label);
       } catch {
         notifyAuthResult(role, false, quick);
       } finally {
         setIsLoading(false);
       }
     },
-    [login],
+    [login, roles],
   );
 
   // When changing roles, automatically update suggested credentials
@@ -76,6 +85,12 @@ export function LoginPage() {
     },
     [institution],
   );
+
+  // Roles differ per institution, so keep the selection within the loaded list
+  useEffect(() => {
+    if (!dbRoles || dbRoles.some((r) => r.slug === selectedRole)) return;
+    handleRoleChange(dbRoles[0]?.slug || "admin");
+  }, [dbRoles, selectedRole, handleRoleChange]);
 
   const handleQuickLogin = useCallback(
     (role: Role) => {
@@ -134,28 +149,33 @@ export function LoginPage() {
             >
               <LoginHeader
                 institution={institution}
+                roleOptions={roles}
+                isLoading={isRolesLoading}
                 helpOpen={helpOpen}
                 onHelpOpenChange={setHelpOpen}
                 onSwitchInstitution={switchInstitution}
               />
               <RoleRibbon
+                roles={roles}
                 selectedRole={selectedRole}
                 onRoleChange={handleRoleChange}
+                isLoading={isRolesLoading}
               />
               <CredentialsForm
                 institution={institution}
                 credentials={credentials}
-                roleLabel={getRoleOption(selectedRole)?.label}
+                roleLabel={roles.find((r) => r.slug === selectedRole)?.name}
                 isLoading={isLoading}
                 onCredentialsChange={setCredentials}
                 onSubmit={handleSignIn}
                 onForgotPassword={openHelp}
               />
-              <QuickLoginGrid
+              {/* <QuickLoginGrid
+                roleOptions={roles}
                 selectedRole={selectedRole}
                 isLoading={isLoading}
                 onQuickLogin={handleQuickLogin}
-              />
+              /> */}
             </div>
           )}
         </div>

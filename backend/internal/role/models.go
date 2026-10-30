@@ -34,28 +34,31 @@ type RoleDetail struct {
 	Permissions    []string `json:"permissions"`
 	CreatedAt      string   `json:"createdAt"`
 	UpdatedAt      string   `json:"updatedAt"`
+	InstitutionID  string   `json:"institutionId"`
 }
 
 // CreateRoleRequest is the JSON body for POST /api/v1/roles
 type CreateRoleRequest struct {
-	Name        string   `json:"name"`
-	Slug        string   `json:"slug"`
-	Department  string   `json:"department"`
-	Description string   `json:"description"`
-	Status      string   `json:"status"`
-	Color       string   `json:"color"`
-	IconName    string   `json:"iconName"`
-	Permissions []string `json:"permissions"`
+	Name          string   `json:"name"`
+	Slug          string   `json:"slug"`
+	Department    string   `json:"department"`
+	Description   string   `json:"description"`
+	Status        string   `json:"status"`
+	Color         string   `json:"color"`
+	IconName      string   `json:"iconName"`
+	Permissions   []string `json:"permissions"`
+	InstitutionID string   `json:"institutionId"`
 }
 
 // UpdateRoleRequest is the JSON body for PUT /api/v1/roles/{id}
 type UpdateRoleRequest struct {
-	Name        string   `json:"name"`
-	Slug        string   `json:"slug"`
-	Department  string   `json:"department"`
-	Description string   `json:"description"`
-	Status      string   `json:"status"`
-	Color       string   `json:"color"`
-	IconName    string   `json:"iconName"`
-	Permissions []string `json:"permissions"`
+	Name          string   `json:"name"`
+	Slug          string   `json:"slug"`
+	Department    string   `json:"department"`
+	Description   string   `json:"description"`
+	Status        string   `json:"status"`
+	Color         string   `json:"color"`
+	IconName      string   `json:"iconName"`
+	Permissions   []string `json:"permissions"`
+	InstitutionID string   `json:"institutionId"`
 }

@@ -25,17 +25,6 @@ func (q *Queries) AddRolePermission(ctx context.Context, arg AddRolePermissionPa
 	return err
 }
 
-const countRoles = `-- name: CountRoles :one
-SELECT COUNT(*) FROM roles
-`
-
-func (q *Queries) CountRoles(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countRoles)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createDepartment = `-- name: CreateDepartment :one
 INSERT INTO departments (name) VALUES ($1) RETURNING id, name
 `
@@ -53,9 +42,9 @@ func (q *Queries) CreateDepartment(ctx context.Context, name string) (CreateDepa
 }
 
 const createRole = `-- name: CreateRole :one
-INSERT INTO roles (name, slug, department_name, description, status, is_system, color, icon_name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at
+INSERT INTO roles (name, slug, department_name, description, status, is_system, color, icon_name, institution_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
 `
 
 type CreateRoleParams struct {
@@ -67,6 +56,7 @@ type CreateRoleParams struct {
 	IsSystem       bool        `json:"is_system"`
 	Color          string      `json:"color"`
 	IconName       string      `json:"icon_name"`
+	InstitutionID  string      `json:"institution_id"`
 }
 
 func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error) {
@@ -79,6 +69,7 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		arg.IsSystem,
 		arg.Color,
 		arg.IconName,
+		arg.InstitutionID,
 	)
 	var i Role
 	err := row.Scan(
@@ -93,6 +84,7 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		&i.IconName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.InstitutionID,
 	)
 	return i, err
 }
@@ -141,7 +133,7 @@ func (q *Queries) GetPermissionByID(ctx context.Context, id string) (Permission,
 }
 
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at
+SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
 FROM roles
 WHERE id = $1
 `
@@ -161,6 +153,7 @@ func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
 		&i.IconName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.InstitutionID,
 	)
 	return i, err
 }
@@ -214,7 +207,7 @@ func (q *Queries) ListAllRolePermissions(ctx context.Context) ([]RolePermission,
 }
 
 const listAllRoles = `-- name: ListAllRoles :many
-SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at
+SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
 FROM roles
 ORDER BY created_at DESC
 `
@@ -240,6 +233,7 @@ func (q *Queries) ListAllRoles(ctx context.Context) ([]Role, error) {
 			&i.IconName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.InstitutionID,
 		); err != nil {
 			return nil, err
 		}
@@ -273,6 +267,32 @@ func (q *Queries) ListDepartments(ctx context.Context) ([]ListDepartmentsRow, er
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInstitutionsWithoutRoles = `-- name: ListInstitutionsWithoutRoles :many
+SELECT i.id FROM institutions i
+WHERE NOT EXISTS (SELECT 1 FROM roles r WHERE r.institution_id = i.id)
+ORDER BY i.id ASC
+`
+
+func (q *Queries) ListInstitutionsWithoutRoles(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listInstitutionsWithoutRoles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -333,6 +353,46 @@ func (q *Queries) ListRolePermissions(ctx context.Context, roleID int32) ([]stri
 	return items, nil
 }
 
+const listRolesByInstitution = `-- name: ListRolesByInstitution :many
+SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
+FROM roles
+WHERE institution_id = $1 AND status = 'active'
+ORDER BY is_system DESC, id ASC
+`
+
+func (q *Queries) ListRolesByInstitution(ctx context.Context, institutionID string) ([]Role, error) {
+	rows, err := q.db.Query(ctx, listRolesByInstitution, institutionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Role
+	for rows.Next() {
+		var i Role
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.DepartmentName,
+			&i.Description,
+			&i.Status,
+			&i.IsSystem,
+			&i.Color,
+			&i.IconName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.InstitutionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateRole = `-- name: UpdateRole :one
 UPDATE roles SET
     name = $2,
@@ -344,7 +404,7 @@ UPDATE roles SET
     icon_name = $8,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at
+RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
 `
 
 type UpdateRoleParams struct {
@@ -382,6 +442,7 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		&i.IconName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.InstitutionID,
 	)
 	return i, err
 }

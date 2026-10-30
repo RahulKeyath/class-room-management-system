@@ -3,7 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { RoleProvider, useRole } from "@/lib/role-context";
 import { useAuth } from "@/lib/auth-context";
-import { CURRENT_USER } from "@/lib/mock-data";
+import { getCurrentUser } from "@/lib/mock-data";
 import { Bell, Search, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 function HeaderBar() {
   const { role } = useRole();
   const { logout } = useAuth();
-  const user = CURRENT_USER[role];
+  const user = getCurrentUser(role);
 
   const handleLogout = () => {
     logout();

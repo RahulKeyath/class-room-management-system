@@ -85,9 +85,11 @@ export interface DbInstitutionalRole {
   permissions: string[];
   createdAt: string;
   updatedAt: string;
+  institutionId: string;
 }
 
 export interface CreateRolePayload {
+  institutionId: string;
   name: string;
   slug: string;
   department?: string;
@@ -146,8 +148,12 @@ export const api = {
     }),
 
   // Institutional Roles CRUD (PostgreSQL roles and role_permissions tables)
-  getInstitutionalRoles: () =>
-    fetchAPI<DbInstitutionalRole[]>("/api/v1/institutional-roles"),
+  getInstitutionalRoles: (institutionId?: string) =>
+    fetchAPI<DbInstitutionalRole[]>(
+      institutionId
+        ? `/api/v1/institutional-roles?institution_id=${encodeURIComponent(institutionId)}`
+        : "/api/v1/institutional-roles",
+    ),
   createInstitutionalRole: (payload: CreateRolePayload) =>
     fetchAPI<DbInstitutionalRole>("/api/v1/institutional-roles", {
       method: "POST",

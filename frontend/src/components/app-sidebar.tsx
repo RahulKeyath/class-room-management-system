@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useRole } from "@/lib/role-context";
 import { useAuth } from "@/lib/auth-context";
-import { CURRENT_USER, type Role } from "@/lib/mock-data";
+import { getCurrentUser, type Role } from "@/lib/mock-data";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -141,7 +141,7 @@ export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (url: string) =>
     url === "/" ? currentPath === "/" : currentPath.startsWith(url);
-  const user = CURRENT_USER[role];
+  const user = getCurrentUser(role);
 
   return (
     <Sidebar collapsible="icon">
@@ -162,7 +162,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {NAV_BY_ROLE[role].map((group) => (
+        {(NAV_BY_ROLE[role] ?? NAV_BY_ROLE.student.slice(0, 1)).map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>

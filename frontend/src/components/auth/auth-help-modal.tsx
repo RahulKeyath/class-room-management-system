@@ -9,19 +9,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { DbInstitutionalRole } from "@/lib/api";
 import type { Institution } from "@/lib/institutions";
-import { getDemoCredentials, type RoleOption } from "./auth-constants";
+import { getDemoCredentials } from "./auth-constants";
 
 export const AuthHelpModal = memo(function AuthHelpModal({
   open,
   onOpenChange,
   institution,
   roleOptions,
+  isLoading,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   institution: Institution;
-  roleOptions: RoleOption[];
+  roleOptions: DbInstitutionalRole[];
+  isLoading?: boolean;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,12 +64,16 @@ export const AuthHelpModal = memo(function AuthHelpModal({
               You can use the 1-click Quick Access buttons or enter:
             </p>
             <div className="mt-2 space-y-1 font-mono text-[11px]">
+              {isLoading && (
+                <p className="text-muted-foreground">Loading roles…</p>
+              )}
               {roleOptions.map((opt) => {
-                const creds = getDemoCredentials(opt.id, institution);
+                const creds = getDemoCredentials(opt.slug, institution);
+                if (!creds.email) return null;
                 return (
                   <div key={opt.id}>
                     <span className="text-primary font-medium">
-                      {opt.label}:
+                      {opt.name}:
                     </span>{" "}
                     {creds.email} / {creds.password}
                   </div>

@@ -27,17 +27,23 @@ ON CONFLICT (id) DO UPDATE SET
 RETURNING id, name, description, category;
 
 -- name: CreateRole :one
-INSERT INTO roles (name, slug, department_name, description, status, is_system, color, icon_name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at;
+INSERT INTO roles (name, slug, department_name, description, status, is_system, color, icon_name, institution_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id;
 
 -- name: ListAllRoles :many
-SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at
+SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
 FROM roles
 ORDER BY created_at DESC;
 
+-- name: ListRolesByInstitution :many
+SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
+FROM roles
+WHERE institution_id = $1 AND status = 'active'
+ORDER BY is_system DESC, id ASC;
+
 -- name: GetRoleByID :one
-SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at
+SELECT id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id
 FROM roles
 WHERE id = $1;
 
@@ -52,7 +58,7 @@ UPDATE roles SET
     icon_name = $8,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at;
+RETURNING id, name, slug, department_name, description, status, is_system, color, icon_name, created_at, updated_at, institution_id;
 
 -- name: DeleteRole :exec
 DELETE FROM roles WHERE id = $1;
@@ -69,5 +75,7 @@ SELECT permission_id FROM role_permissions WHERE role_id = $1;
 -- name: ListAllRolePermissions :many
 SELECT role_id, permission_id FROM role_permissions;
 
--- name: CountRoles :one
-SELECT COUNT(*) FROM roles;
+-- name: ListInstitutionsWithoutRoles :many
+SELECT i.id FROM institutions i
+WHERE NOT EXISTS (SELECT 1 FROM roles r WHERE r.institution_id = i.id)
+ORDER BY i.id ASC;

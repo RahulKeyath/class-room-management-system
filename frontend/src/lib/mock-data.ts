@@ -36,6 +36,27 @@ export const CURRENT_USER: Record<
   },
 };
 
+/** Roles created per institution have no demo persona, so derive one from the slug. */
+export function getCurrentUser(role: Role) {
+  const name = role
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+  return (
+    CURRENT_USER[role] ?? {
+      name,
+      title: name,
+      id: role.toUpperCase(),
+      avatar: name
+        .split(" ")
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join(""),
+    }
+  );
+}
+
 export const STATS = {
   totalStudents: 1248,
   totalStaff: 86,

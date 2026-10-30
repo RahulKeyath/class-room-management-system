@@ -50,7 +50,10 @@ generate:
 ## Apply schema migrations to the running PostgreSQL container
 migrate:
 	docker compose exec -T postgres psql -U crm_user -d classroom_db \
-		-f /docker-entrypoint-initdb.d/001_attendance.sql
+		-f /docker-entrypoint-initdb.d/001_attendance.sql \
+		-f /docker-entrypoint-initdb.d/002_roles.sql \
+		-f /docker-entrypoint-initdb.d/003_institutions.sql \
+		-f /docker-entrypoint-initdb.d/004_roles_institution_id.sql
 
 # ─── Frontend ───────────────────────────────────────────────────────
 

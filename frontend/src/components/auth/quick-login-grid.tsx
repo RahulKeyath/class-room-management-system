@@ -1,19 +1,16 @@
 import { memo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { DbInstitutionalRole } from "@/lib/api";
 import { CURRENT_USER, type Role } from "@/lib/mock-data";
-import {
-  PERSONA_LABELS,
-  ROLE_OPTIONS,
-  type RoleOption,
-} from "./auth-constants";
+import { PERSONA_LABELS } from "./auth-constants";
 
 export const QuickLoginGrid = memo(function QuickLoginGrid({
-  roleOptions = ROLE_OPTIONS,
+  roleOptions,
   selectedRole,
   isLoading,
   onQuickLogin,
 }: {
-  roleOptions?: RoleOption[];
+  roleOptions: DbInstitutionalRole[];
   selectedRole: Role;
   isLoading: boolean;
   onQuickLogin: (role: Role) => void;
@@ -35,15 +32,17 @@ export const QuickLoginGrid = memo(function QuickLoginGrid({
       {/* Quick Demo Sign-in Tiles */}
       <div className="grid grid-cols-5 gap-2 sm:gap-3">
         {roleOptions.map((opt) => {
-          const persona = CURRENT_USER[opt.id];
-          const info = PERSONA_LABELS[opt.id];
-          const isSelected = selectedRole === opt.id;
+          const persona = CURRENT_USER[opt.slug];
+          const info = PERSONA_LABELS[opt.slug];
+          // Only roles with a demo persona get a quick-access tile
+          if (!persona || !info) return null;
+          const isSelected = selectedRole === opt.slug;
           return (
             <button
               key={opt.id}
               type="button"
               disabled={isLoading}
-              onClick={() => onQuickLogin(opt.id)}
+              onClick={() => onQuickLogin(opt.slug)}
               className={`flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-xl border transition-all text-center group cursor-pointer ${
                 isSelected
                   ? "bg-accent/5 border-accent/40 shadow-xs"

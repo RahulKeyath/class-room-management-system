@@ -69,14 +69,7 @@ func main() {
 		log.Println("✓ Permissions verified/seeded in database")
 	}
 
-	// Ensure default institutional roles exist in the database
-	if err := roleService.SeedRoles(ctx); err != nil {
-		log.Printf("⚠️ Warning: could not seed default roles: %v", err)
-	} else {
-		log.Println("✓ Default institutional roles verified/seeded in database")
-	}
-
-	institutionService := institution.NewService(pool)
+	institutionService := institution.NewService(pool, roleService)
 	institutionHandler := institution.NewHandler(institutionService)
 
 	// Ensure the demo institutions exist so existing demo accounts keep working
@@ -84,6 +77,13 @@ func main() {
 		log.Printf("⚠️ Warning: could not seed default institutions: %v", err)
 	} else {
 		log.Println("✓ Default institutions verified/seeded in database")
+	}
+
+	// Ensure every institution has its default roles
+	if err := roleService.SeedRoles(ctx); err != nil {
+		log.Printf("⚠️ Warning: could not seed default roles: %v", err)
+	} else {
+		log.Println("✓ Default institutional roles verified/seeded in database")
 	}
 
 

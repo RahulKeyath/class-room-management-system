@@ -13,7 +13,7 @@ type DefaultRoleDefinition struct {
 	Permissions []string
 }
 
-// DefaultInitialRoles contains canonical initial roles to seed when database table is empty.
+// DefaultInitialRoles contains canonical initial roles to seed for each institution.
 var DefaultInitialRoles = []DefaultRoleDefinition{
 	{
 		Name:        "Administrator",

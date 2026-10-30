@@ -2,13 +2,18 @@ package role
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/db"
 )
+
+// ErrInstitutionMismatch is returned when an update names a different institution than the role's.
+var ErrInstitutionMismatch = errors.New("role does not belong to institution")
 
 // Service encapsulates the business logic for roles.
 type Service struct {
@@ -144,6 +149,7 @@ func dbRoleToDetail(r db.Role, permIDs []string) RoleDetail {
 		Permissions:    permIDs,
 		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
+		InstitutionID:  r.InstitutionID,
 	}
 }
 
@@ -195,6 +201,7 @@ func (s *Service) CreateRole(ctx context.Context, req CreateRoleRequest) (*RoleD
 		IsSystem:       false,
 		Color:          color,
 		IconName:       iconName,
+		InstitutionID:  req.InstitutionID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create role: %w", err)
@@ -224,7 +231,19 @@ func (s *Service) ListAllRoles(ctx context.Context) ([]RoleDetail, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list roles: %w", err)
 	}
+	return s.withPermissions(ctx, dbRoles)
+}
 
+// ListByInstitution returns the active roles of one institution with their permissions.
+func (s *Service) ListByInstitution(ctx context.Context, institutionID string) ([]RoleDetail, error) {
+	dbRoles, err := s.q.ListRolesByInstitution(ctx, institutionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list roles for institution %s: %w", institutionID, err)
+	}
+	return s.withPermissions(ctx, dbRoles)
+}
+
+func (s *Service) withPermissions(ctx context.Context, dbRoles []db.Role) ([]RoleDetail, error) {
 	allPerms, err := s.q.ListAllRolePermissions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list role permissions: %w", err)
@@ -256,6 +275,16 @@ func (s *Service) UpdateRole(ctx context.Context, id int32, req UpdateRoleReques
 	defer tx.Rollback(ctx)
 
 	qtx := s.q.WithTx(tx)
+
+	if req.InstitutionID != "" {
+		existing, err := qtx.GetRoleByID(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load role: %w", err)
+		}
+		if existing.InstitutionID != req.InstitutionID {
+			return nil, ErrInstitutionMismatch
+		}
+	}
 
 	deptName := pgtype.Text{}
 	if req.Department != "" {
@@ -329,28 +358,38 @@ func (s *Service) DeleteRole(ctx context.Context, id int32) error {
 	return nil
 }
 
-// SeedRoles initializes canonical default roles if the roles table is empty.
+// SeedRoles gives every institution that has no roles yet the canonical default roles.
 func (s *Service) SeedRoles(ctx context.Context) error {
-	count, err := s.q.CountRoles(ctx)
+	institutionIDs, err := s.q.ListInstitutionsWithoutRoles(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to count roles: %w", err)
-	}
-	if count > 0 {
-		return nil // already seeded
+		return fmt.Errorf("failed to list institutions without roles: %w", err)
 	}
 
-	for _, dr := range DefaultInitialRoles {
+	for _, institutionID := range institutionIDs {
 		tx, err := s.pool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to begin seed tx: %w", err)
 		}
+		if err := s.SeedInstitutionRoles(ctx, tx, institutionID); err != nil {
+			tx.Rollback(ctx)
+			return err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("failed to commit seed roles for %s: %w", institutionID, err)
+		}
+	}
 
-		qtx := s.q.WithTx(tx)
+	return nil
+}
 
+// SeedInstitutionRoles creates the canonical default roles for one institution within tx.
+func (s *Service) SeedInstitutionRoles(ctx context.Context, tx pgx.Tx, institutionID string) error {
+	qtx := s.q.WithTx(tx)
+
+	for _, dr := range DefaultInitialRoles {
 		deptName := pgtype.Text{}
 		if dr.Department != "" {
 			if _, err := tx.Exec(ctx, "INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", dr.Department); err != nil {
-				tx.Rollback(ctx)
 				return fmt.Errorf("failed to seed department %s: %w", dr.Department, err)
 			}
 			deptName = pgtype.Text{String: dr.Department, Valid: true}
@@ -365,10 +404,10 @@ func (s *Service) SeedRoles(ctx context.Context) error {
 			IsSystem:       dr.IsSystem,
 			Color:          dr.Color,
 			IconName:       dr.IconName,
+			InstitutionID:  institutionID,
 		})
 		if err != nil {
-			tx.Rollback(ctx)
-			return fmt.Errorf("failed to seed role %s: %w", dr.Name, err)
+			return fmt.Errorf("failed to seed role %s for %s: %w", dr.Name, institutionID, err)
 		}
 
 		for _, permID := range dr.Permissions {
@@ -376,13 +415,8 @@ func (s *Service) SeedRoles(ctx context.Context) error {
 				RoleID:       createdRole.ID,
 				PermissionID: permID,
 			}); err != nil {
-				tx.Rollback(ctx)
 				return fmt.Errorf("failed to assign seed permission %s to role %d: %w", permID, createdRole.ID, err)
 			}
-		}
-
-		if err := tx.Commit(ctx); err != nil {
-			return fmt.Errorf("failed to commit seed role %s: %w", dr.Name, err)
 		}
 	}
 

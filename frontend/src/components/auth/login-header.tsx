@@ -1,21 +1,23 @@
 import { memo } from "react";
 import { ArrowLeftRight, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { DbInstitutionalRole } from "@/lib/api";
 import type { Institution } from "@/lib/institutions";
-import { ROLE_OPTIONS, type RoleOption } from "./auth-constants";
 import { AuthHelpModal } from "./auth-help-modal";
 import { InstitutionAvatar } from "./institution-step";
 
 /** Active-institution banner plus the Step 2 title row with the help dialog. */
 export const LoginHeader = memo(function LoginHeader({
   institution,
-  roleOptions = ROLE_OPTIONS,
+  roleOptions,
+  isLoading,
   helpOpen,
   onHelpOpenChange,
   onSwitchInstitution,
 }: {
   institution: Institution;
-  roleOptions?: RoleOption[];
+  roleOptions: DbInstitutionalRole[];
+  isLoading?: boolean;
   helpOpen: boolean;
   onHelpOpenChange: (open: boolean) => void;
   onSwitchInstitution: () => void;
@@ -60,6 +62,7 @@ export const LoginHeader = memo(function LoginHeader({
             onOpenChange={onHelpOpenChange}
             institution={institution}
             roleOptions={roleOptions}
+            isLoading={isLoading}
           />
         </div>
 

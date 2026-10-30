@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { useRole } from "@/lib/role-context";
 import {
   STATS,
-  CURRENT_USER,
+  getCurrentUser,
   RECENT_ACTIVITY,
   TIMETABLE,
   RESULTS,
@@ -82,7 +82,7 @@ function StatCard({
 
 function Dashboard() {
   const { role } = useRole();
-  const user = CURRENT_USER[role];
+  const user = getCurrentUser(role);
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",

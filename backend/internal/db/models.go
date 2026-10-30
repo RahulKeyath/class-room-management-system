@@ -37,6 +37,22 @@ type Department struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Institution struct {
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	ShortName   string             `json:"short_name"`
+	Code        string             `json:"code"`
+	Type        string             `json:"type"`
+	City        string             `json:"city"`
+	Campus      string             `json:"campus"`
+	Domain      string             `json:"domain"`
+	Established int32              `json:"established"`
+	Motto       pgtype.Text        `json:"motto"`
+	Gradient    string             `json:"gradient"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Permission struct {
 	ID          string      `json:"id"`
 	Name        string      `json:"name"`
@@ -56,6 +72,7 @@ type Role struct {
 	IconName       string             `json:"icon_name"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	InstitutionID  string             `json:"institution_id"`
 }
 
 type RolePermission struct {

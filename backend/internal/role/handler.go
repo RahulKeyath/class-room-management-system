@@ -2,6 +2,7 @@ package role
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -112,9 +113,18 @@ func (h *Handler) SeedPermissions(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(permissions)
 }
 
-// ListAllRoles handles GET /api/v1/institutional-roles
+// ListAllRoles handles GET /api/v1/institutional-roles. With ?institution_id it
+// returns that institution's active roles; otherwise every role (for super-admin).
 func (h *Handler) ListAllRoles(w http.ResponseWriter, r *http.Request) {
-	roles, err := h.service.ListAllRoles(r.Context())
+	var (
+		roles []RoleDetail
+		err   error
+	)
+	if institutionID := r.URL.Query().Get("institution_id"); institutionID != "" {
+		roles, err = h.service.ListByInstitution(r.Context(), institutionID)
+	} else {
+		roles, err = h.service.ListAllRoles(r.Context())
+	}
 	if err != nil {
 		http.Error(w, `{"error":"failed to list roles"}`, http.StatusInternalServerError)
 		return
@@ -136,6 +146,11 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"role name is required"}`, http.StatusBadRequest)
 		return
 	}
+	req.InstitutionID = strings.TrimSpace(req.InstitutionID)
+	if req.InstitutionID == "" {
+		http.Error(w, `{"error":"institution id is required"}`, http.StatusBadRequest)
+		return
+	}
 	req.Slug = strings.TrimSpace(req.Slug)
 	if req.Slug == "" {
 		req.Slug = strings.ToLower(strings.ReplaceAll(req.Name, " ", "_"))
@@ -143,7 +158,7 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.service.CreateRole(r.Context(), req)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value") || strings.Contains(err.Error(), "roles_slug_key") {
+		if strings.Contains(err.Error(), "duplicate key value") || strings.Contains(err.Error(), "uq_roles_institution_slug") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			json.NewEncoder(w).Encode(map[string]string{
@@ -186,7 +201,11 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.service.UpdateRole(r.Context(), int32(id), req)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value") || strings.Contains(err.Error(), "roles_slug_key") {
+		if errors.Is(err, ErrInstitutionMismatch) {
+			http.Error(w, `{"error":"role does not belong to this institution"}`, http.StatusBadRequest)
+			return
+		}
+		if strings.Contains(err.Error(), "duplicate key value") || strings.Contains(err.Error(), "uq_roles_institution_slug") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			json.NewEncoder(w).Encode(map[string]string{

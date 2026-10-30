@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Role } from "./mock-data";
-import { CURRENT_USER } from "./mock-data";
+import { getCurrentUser } from "./mock-data";
 import { type AuthUser, ROLE_CREDENTIALS } from "./auth-types";
 
 interface AuthContextValue {
@@ -87,12 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const currentUserData = CURRENT_USER[role];
+  const currentUserData = getCurrentUser(role);
   const user: AuthUser = {
     ...currentUserData,
     role,
-    email: ROLE_CREDENTIALS[role].email,
-    department: ROLE_CREDENTIALS[role].department,
+    email: ROLE_CREDENTIALS[role]?.email ?? "",
+    department: ROLE_CREDENTIALS[role]?.department,
   };
 
   return (
