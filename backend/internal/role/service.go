@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/db"
@@ -14,6 +15,9 @@ import (
 
 // ErrInstitutionMismatch is returned when an update names a different institution than the role's.
 var ErrInstitutionMismatch = errors.New("role does not belong to institution")
+
+// ErrRoleInUse is returned when deleting a role that users are still assigned to.
+var ErrRoleInUse = errors.New("role is assigned to users")
 
 // Service encapsulates the business logic for roles.
 type Service struct {
@@ -353,6 +357,10 @@ func (s *Service) UpdateRole(ctx context.Context, id int32, req UpdateRoleReques
 // DeleteRole removes a role from the database (role_permissions cascade automatically).
 func (s *Service) DeleteRole(ctx context.Context, id int32) error {
 	if err := s.q.DeleteRole(ctx, id); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return ErrRoleInUse
+		}
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
 	return nil

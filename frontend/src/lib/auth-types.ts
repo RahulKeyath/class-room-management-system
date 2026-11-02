@@ -8,6 +8,7 @@ export interface AuthUser {
   role: Role;
   email: string;
   department?: string;
+  institution_id?: number;
 }
 
 export const ROLE_CREDENTIALS: Record<

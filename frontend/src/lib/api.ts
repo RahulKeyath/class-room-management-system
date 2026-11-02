@@ -5,16 +5,44 @@ const rawUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000").trim();
 // Automatically ensure localhost development uses http:// to prevent SSL protocol errors
 export const API_BASE_URL = rawUrl.replace(/^https:\/\/localhost/, "http://localhost");
 
+const AUTH_TOKEN_KEY = "crm_auth_token";
+
+export function getAuthToken(): string | null {
+  try {
+    return sessionStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string) {
+  try {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearAuthToken() {
+  try {
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 // Helper for standard API calls
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const token = getAuthToken();
   try {
     const response = await fetch(url, {
+      ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options?.headers,
       },
-      ...options,
     });
 
     if (!response.ok) {
@@ -32,6 +60,22 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
     console.error(`[API] Error calling ${url}:`, err);
     throw err;
   }
+}
+
+/* ── Auth Types (Matching backend Go models) ────────────── */
+export interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  title: string;
+  department: string;
+  institution_id: number;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: ApiUser;
 }
 
 /* ── Attendance Types (Matching backend Go models) ────────── */
@@ -118,6 +162,14 @@ export type CreateInstitutionPayload = Omit<Institution, "id">;
 export const api = {
   // Health check
   getHealth: () => fetchAPI<{ status: string; time: string }>("/health"),
+
+  // Auth endpoints
+  login: (email: string, password: string) =>
+    fetchAPI<LoginResponse>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  getMe: () => fetchAPI<ApiUser>("/api/v1/auth/me"),
 
   // Institution endpoints
   getInstitutions: () => fetchAPI<Institution[]>("/api/v1/institutions"),

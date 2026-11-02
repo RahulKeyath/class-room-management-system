@@ -1,9 +1,8 @@
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { RoleProvider, useRole } from "@/lib/role-context";
+import { RoleProvider } from "@/lib/role-context";
 import { useAuth } from "@/lib/auth-context";
-import { getCurrentUser } from "@/lib/mock-data";
 import { Bell, Search, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,9 +10,7 @@ import { LoginPage } from "@/components/login-page";
 import { toast } from "sonner";
 
 function HeaderBar() {
-  const { role } = useRole();
-  const { logout } = useAuth();
-  const user = getCurrentUser(role);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -41,9 +38,7 @@ function HeaderBar() {
         </Button>
         <div className="hidden sm:flex flex-col text-right leading-tight">
           <span className="text-sm font-medium">{user.name}</span>
-          <span className="text-xs text-muted-foreground capitalize">
-            {role}
-          </span>
+          <span className="text-xs text-muted-foreground">{user.title}</span>
         </div>
         <Button
           variant="outline"
@@ -61,8 +56,13 @@ function HeaderBar() {
 }
 
 function AuthenticatedApp() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Avoid flashing the login page while a stored session is being restored
+  if (isInitializing) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   // If not authenticated or explicitly on /login route, show the full-screen Login Page
   if (!isAuthenticated || pathname === "/login") {

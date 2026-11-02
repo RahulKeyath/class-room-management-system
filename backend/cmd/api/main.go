@@ -13,16 +13,23 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/attendance"
+	"github.com/RahulKeyath/class-room-management-system/backend/internal/auth"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/config"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/institution"
 	"github.com/RahulKeyath/class-room-management-system/backend/internal/role"
+	"github.com/RahulKeyath/class-room-management-system/backend/sql"
 )
 
 func main() {
 	// ── Load configuration ──────────────────────────────────────────
 	cfg := config.Load()
+	if cfg.JWTSecret == config.DevJWTSecret {
+		log.Println("⚠️ Warning: JWT_SECRET is not set; using the insecure development key")
+	}
 
 	// ── Connect to PostgreSQL ───────────────────────────────────────
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -38,6 +45,18 @@ func main() {
 		log.Fatalf("unable to ping database: %v", err)
 	}
 	log.Println("✓ Connected to PostgreSQL")
+
+	// ── Apply database migrations ───────────────────────────────────
+	db := stdlib.OpenDBFromPool(pool)
+	defer db.Close()
+	goose.SetBaseFS(sql.Migrations)
+	if err := goose.SetDialect("postgres"); err != nil {
+		log.Fatalf("goose dialect error: %v", err)
+	}
+	if err := goose.Up(db, "schema"); err != nil {
+		log.Fatalf("goose migration failed: %v", err)
+	}
+	log.Println("✓ Database migrations verified and applied")
 
 	// ── Build the router ────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -87,35 +106,59 @@ func main() {
 	}
 
 
+	authService := auth.NewService(pool, cfg.JWTSecret)
+	authHandler := auth.NewHandler(authService)
+
+	// Hashing every demo password can outlast the startup timeout on a fresh database
+	seedCtx, seedCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer seedCancel()
+
+	// Ensure every institution has its demo users
+	if err := authService.SeedUsers(seedCtx); err != nil {
+		log.Printf("⚠️ Warning: could not seed demo users: %v", err)
+	} else {
+		log.Println("✓ Demo users verified/seeded in database")
+	}
+
+	requireAuth := auth.AuthMiddleware(cfg.JWTSecret)
+
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/roles", roleHandler.List)
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", authHandler.Login)
+			r.With(requireAuth).Get("/me", authHandler.Me)
+		})
+		r.With(requireAuth).Get("/roles", roleHandler.List)
 		r.Route("/institutions", func(r chi.Router) {
 			r.Get("/", institutionHandler.List)
-			r.Post("/", institutionHandler.Create)
+			r.With(requireAuth).Post("/", institutionHandler.Create)
 		})
 		r.Route("/departments", func(r chi.Router) {
+			r.Use(requireAuth)
 			r.Get("/", roleHandler.ListDepartments)
 			r.Post("/", roleHandler.CreateDepartment)
 			r.Delete("/{name}", roleHandler.DeleteDepartment)
 		})
 		r.Route("/permissions", func(r chi.Router) {
+			r.Use(requireAuth)
 			r.Get("/", roleHandler.ListPermissions)
 			r.Post("/seed", roleHandler.SeedPermissions)
 		})
 		r.Route("/institutional-roles", func(r chi.Router) {
 			r.Get("/", roleHandler.ListAllRoles)
-			r.Post("/", roleHandler.CreateRole)
-			r.Put("/{id}", roleHandler.UpdateRole)
-			r.Delete("/{id}", roleHandler.DeleteRole)
+			r.Group(func(r chi.Router) {
+				r.Use(requireAuth)
+				r.Post("/", roleHandler.CreateRole)
+				r.Put("/{id}", roleHandler.UpdateRole)
+				r.Delete("/{id}", roleHandler.DeleteRole)
+			})
 		})
 		r.Route("/attendance", func(r chi.Router) {
+			r.Use(requireAuth)
 			r.Get("/", attendanceHandler.List)
 			r.Post("/", attendanceHandler.MarkAttendance)
 			r.Get("/{id}", attendanceHandler.GetByID)
 		})
 	})
-
-
 
 	// ── Start HTTP server ───────────────────────────────────────────
 	srv := &http.Server{

@@ -6,12 +6,15 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
 	CreateDepartment(ctx context.Context, name string) (CreateDepartmentRow, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	// Remove an attendance record by ID.
 	DeleteAttendance(ctx context.Context, id int64) error
 	DeleteDepartment(ctx context.Context, name string) error
@@ -21,6 +24,9 @@ type Querier interface {
 	GetAttendanceByID(ctx context.Context, id int64) (GetAttendanceByIDRow, error)
 	GetPermissionByID(ctx context.Context, id string) (Permission, error)
 	GetRoleByID(ctx context.Context, id int32) (Role, error)
+	GetRoleIDByInstitutionAndSlug(ctx context.Context, arg GetRoleIDByInstitutionAndSlugParams) (int32, error)
+	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
+	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	ListActiveRoles(ctx context.Context) ([]UserRole, error)
 	ListAllRolePermissions(ctx context.Context) ([]RolePermission, error)
 	ListAllRoles(ctx context.Context) ([]Role, error)
@@ -30,12 +36,14 @@ type Querier interface {
 	// Retrieve all attendance records for a given class on a specific date.
 	ListAttendanceByClassAndDate(ctx context.Context, arg ListAttendanceByClassAndDateParams) ([]ListAttendanceByClassAndDateRow, error)
 	ListDepartments(ctx context.Context) ([]ListDepartmentsRow, error)
+	ListInstitutionDomains(ctx context.Context) ([]ListInstitutionDomainsRow, error)
 	ListInstitutionsWithoutRoles(ctx context.Context) ([]int32, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
 	ListRolePermissions(ctx context.Context, roleID int32) ([]string, error)
 	ListRolesByInstitution(ctx context.Context, institutionID int32) ([]Role, error)
 	// Retrieve all students enrolled in a given class.
-	ListStudentsByClass(ctx context.Context, classID int64) ([]User, error)
+	ListStudentsByClass(ctx context.Context, classID int64) ([]ListStudentsByClassRow, error)
+	ListUsersByInstitution(ctx context.Context, institutionID pgtype.Int4) ([]ListUsersByInstitutionRow, error)
 	// Insert or update an attendance record for a student in a class on a date.
 	MarkPresent(ctx context.Context, arg MarkPresentParams) error
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error)

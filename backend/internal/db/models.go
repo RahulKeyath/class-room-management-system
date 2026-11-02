@@ -81,11 +81,17 @@ type RolePermission struct {
 }
 
 type User struct {
-	ID        int64              `json:"id"`
-	FullName  string             `json:"full_name"`
-	Email     string             `json:"email"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID            int64              `json:"id"`
+	FullName      string             `json:"full_name"`
+	Email         string             `json:"email"`
+	Role          string             `json:"role"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	InstitutionID pgtype.Int4        `json:"institution_id"`
+	RoleID        pgtype.Int4        `json:"role_id"`
+	PasswordHash  string             `json:"password_hash"`
+	Title         string             `json:"title"`
+	Department    string             `json:"department"`
+	Status        string             `json:"status"`
 }
 
 type UserRole struct {

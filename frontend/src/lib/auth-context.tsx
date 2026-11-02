@@ -5,99 +5,122 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { api, clearAuthToken, getAuthToken, setAuthToken, type ApiUser } from "./api";
 import type { Role } from "./mock-data";
-import { getCurrentUser } from "./mock-data";
-import { type AuthUser, ROLE_CREDENTIALS } from "./auth-types";
+import type { AuthUser } from "./auth-types";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
+  isInitializing: boolean;
   role: Role;
   user: AuthUser;
   setRole: (r: Role) => void;
-  login: (
-    selectedRole?: Role,
-    credentials?: { email?: string; password?: string },
-  ) => Promise<boolean>;
+  login: (credentials: { email: string; password: string }) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "northgate_academy_auth";
+// Written by the former mock login; removed on sign-out so no stale session survives
+const LEGACY_STORAGE_KEY = "northgate_academy_auth";
+
+const SIGNED_OUT_USER: AuthUser = {
+  id: "",
+  name: "",
+  title: "",
+  avatar: "",
+  role: "admin",
+  email: "",
+};
+
+function toAuthUser(user: ApiUser): AuthUser {
+  const initials = user.name
+    .replace(/^(Dr|Mr|Mrs|Ms|Prof)\.?\s+/i, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+  return { ...user, avatar: initials };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>("admin");
-  // Default to false so that the login page appears immediately when the application is open
+  // `role` is the portal being viewed ("View as"); `user` stays the signed-in account
+  const [role, setRole] = useState<Role>("admin");
+  const [user, setUser] = useState<AuthUser>(SIGNED_OUT_USER);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.isAuthenticated && parsed.role) {
-          setIsAuthenticated(true);
-          setRoleState(parsed.role);
-        }
-      }
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
-
-  const setRole = (newRole: Role) => {
-    setRoleState(newRole);
-    if (isAuthenticated) {
-      try {
-        sessionStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ isAuthenticated: true, role: newRole }),
-        );
-      } catch {
-        // Ignore
-      }
-    }
-  };
-
-  const login = async (
-    selectedRole: Role = role,
-    credentials?: { email?: string; password?: string },
-  ): Promise<boolean> => {
-    // Simulate brief authentication verification delay for smooth UX
-    await new Promise((res) => setTimeout(res, 500));
-    setRoleState(selectedRole);
+  const applyUser = (apiUser: ApiUser) => {
+    const authUser = toAuthUser(apiUser);
+    setUser(authUser);
+    setRole(authUser.role);
     setIsAuthenticated(true);
-    try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ isAuthenticated: true, role: selectedRole }),
-      );
-    } catch {
-      // Ignore
-    }
-    return true;
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
+    clearAuthToken();
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       // Ignore
     }
+    setUser(SIGNED_OUT_USER);
+    setRole("admin");
+    setIsAuthenticated(false);
   };
 
-  const currentUserData = getCurrentUser(role);
-  const user: AuthUser = {
-    ...currentUserData,
-    role,
-    email: ROLE_CREDENTIALS[role]?.email ?? "",
-    department: ROLE_CREDENTIALS[role]?.department,
+  useEffect(() => {
+    if (!getAuthToken()) {
+      setIsInitializing(false);
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .getMe()
+      .then((apiUser) => {
+        if (!cancelled) applyUser(apiUser);
+      })
+      .catch(() => {
+        if (!cancelled) logout();
+      })
+      .finally(() => {
+        if (!cancelled) setIsInitializing(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const login = async (credentials: {
+    email: string;
+    password: string;
+  }): Promise<boolean> => {
+    try {
+      const { token, user: apiUser } = await api.login(
+        credentials.email,
+        credentials.password,
+      );
+      setAuthToken(token);
+      applyUser(apiUser);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, role, user, setRole, login, logout }}
+      value={{
+        isAuthenticated,
+        isInitializing,
+        role,
+        user,
+        setRole,
+        login,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

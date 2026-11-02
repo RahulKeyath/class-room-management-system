@@ -62,19 +62,15 @@ export function LoginPage() {
   }, [institutions]);
 
   const authenticate = useCallback(
-    async (role: Role, creds: Credentials, quick = false) => {
+    async (creds: Credentials, quick = false) => {
       setIsLoading(true);
       try {
-        await login(role, creds);
-        const label = roles.find((r) => r.slug === role)?.name;
-        notifyAuthResult(role, true, quick, label);
-      } catch {
-        notifyAuthResult(role, false, quick);
+        notifyAuthResult(await login(creds), quick);
       } finally {
         setIsLoading(false);
       }
     },
-    [login, roles],
+    [login],
   );
 
   // When changing roles, automatically update suggested credentials
@@ -95,14 +91,14 @@ export function LoginPage() {
   const handleQuickLogin = useCallback(
     (role: Role) => {
       handleRoleChange(role);
-      void authenticate(role, getDemoCredentials(role, institution), true);
+      void authenticate(getDemoCredentials(role, institution), true);
     },
     [institution, handleRoleChange, authenticate],
   );
 
   const handleSignIn = useCallback(
-    () => void authenticate(selectedRole, credentials),
-    [credentials, selectedRole, authenticate],
+    () => void authenticate(credentials),
+    [credentials, authenticate],
   );
 
   const handleSelectInstitution = useCallback(

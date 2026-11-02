@@ -234,7 +234,12 @@ func (h *Handler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.DeleteRole(r.Context(), int32(id)); err != nil {
+	err = h.service.DeleteRole(r.Context(), int32(id))
+	if errors.Is(err, ErrRoleInUse) {
+		http.Error(w, `{"error":"role is assigned to users"}`, http.StatusConflict)
+		return
+	}
+	if err != nil {
 		http.Error(w, `{"error":"failed to delete role"}`, http.StatusInternalServerError)
 		return
 	}

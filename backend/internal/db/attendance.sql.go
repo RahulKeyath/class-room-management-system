@@ -139,16 +139,24 @@ WHERE ce.class_id = $1
 ORDER BY u.full_name
 `
 
+type ListStudentsByClassRow struct {
+	ID        int64              `json:"id"`
+	FullName  string             `json:"full_name"`
+	Email     string             `json:"email"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 // Retrieve all students enrolled in a given class.
-func (q *Queries) ListStudentsByClass(ctx context.Context, classID int64) ([]User, error) {
+func (q *Queries) ListStudentsByClass(ctx context.Context, classID int64) ([]ListStudentsByClassRow, error) {
 	rows, err := q.db.Query(ctx, listStudentsByClass, classID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListStudentsByClassRow
 	for rows.Next() {
-		var i User
+		var i ListStudentsByClassRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.FullName,

@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { ROLE_CREDENTIALS } from "@/lib/auth-types";
-import { getCurrentUser, type Role } from "@/lib/mock-data";
+import type { Role } from "@/lib/mock-data";
 import { type Institution, emailForInstitution } from "@/lib/institutions";
 
 export type AuthStep = "institution" | "login" | "register-institution";
@@ -63,12 +63,7 @@ export function getBrandName(institution?: Institution) {
 }
 
 /** Shows the sign-in outcome toast; quick-login tiles use slightly different copy. */
-export function notifyAuthResult(
-  role: Role,
-  ok: boolean,
-  quick = false,
-  label?: string,
-) {
+export function notifyAuthResult(ok: boolean, quick = false) {
   if (!ok) {
     toast.error(
       quick
@@ -77,9 +72,7 @@ export function notifyAuthResult(
     );
     return;
   }
-  toast.success(`Welcome back, ${getCurrentUser(role).name}!`, {
-    description: quick
-      ? `Authenticated as ${label || role}.`
-      : `Signed in to ${label || "Portal"}.`,
+  toast.success("Welcome back!", {
+    description: "Signed in to your institutional portal.",
   });
 }
